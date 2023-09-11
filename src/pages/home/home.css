@@ -1,0 +1,217 @@
+.home__container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.home__welcome {
+  display: flex;
+  width: 100%;
+  padding: 30px;
+
+  color: #00ff00;
+  font-style: normal;
+  font-weight: bolder;
+  font-size: 3rem;
+  user-select: none;
+}
+
+.table-container {
+  background-color: black;
+  color: #00ff55;
+  padding: 20px;
+}
+
+.table-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.table-header-button {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background-color: #00ff00;
+  border-radius: 25px;
+  cursor: pointer;
+}
+
+/* Style the dialog */
+.password-dialog {
+  width: 300px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  background-color: black; /* Set the background color to black */
+  color: orange; /* Set the font color to orange */
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+/* Style the dialog content */
+.password-dialog p {
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.password-dialog__form {
+  width: 80%;
+}
+
+/* Style the input fields */
+.password-dialog__input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.password-dialog__form-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+/* Style the OK button */
+.password-dialog__form-button {
+  background-color: orange;
+  color: white;
+  border: none;
+  width: 80px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.password-dialog__form-button:hover {
+  background-color: #ff8000; /* Darker orange on hover */
+}
+
+/* Style the dialog */
+.auth-dialog {
+  width: 300px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  background-color: black; /* Set the background color to black */
+  color: orange; /* Set the font color to orange */
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+/* Style the dialog content */
+.auth-dialog p {
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.auth-dialog__form {
+  width: 80%;
+}
+
+/* Style the input fields */
+.auth-dialog__input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.auth-dialog__form-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+/* Style the OK button */
+.auth-dialog__form-button {
+  background-color: orange;
+  color: white;
+  border: none;
+  width: 80px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.auth-dialog__form-button:hover {
+  background-color: #ff8000; /* Darker orange on hover */
+}
+
+/* Style the dialog */
+.confirm-delete-dialog {
+  width: 300px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  background-color: black; /* Set the background color to black */
+  color: orange; /* Set the font color to orange */
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+/* Style the dialog content */
+.confirm-delete-dialog p {
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.confirm-delete-dialog__form {
+  width: 80%;
+}
+
+/* Style the input fields */
+.confirm-delete-dialog__input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.confirm-delete-dialog__form-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+/* Style the OK button */
+.confirm-delete-dialog__form-button {
+  background-color: orange;
+  color: white;
+  border: none;
+  width: 80px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.confirm-delete-dialog__form-button:hover {
+  background-color: #ff8000; /* Darker orange on hover */
+}
+
+.site-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.site-table th,
+.site-table td {
+  border: 1px solid blue;
+  padding: 10px;
+}
+
+.site-table th {
+  background-color: black;
+}
+
+.site-table td {
+  background-color: black;
+}
+
+.site-table td:first-child {
+  font-weight: bold;
+}
