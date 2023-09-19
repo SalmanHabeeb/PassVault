@@ -239,6 +239,11 @@ function HomePage() {
     }
   };
 
+  const handleClickSettings = () => {
+    dispatch(loginActions.setSettings(true));
+    sessionStorage.setItem("settings", "true");
+  };
+
   const executeFunc = async (func, args) => {
     console.log(func);
     console.log(args, typeof args);
@@ -890,7 +895,7 @@ function HomePage() {
           <div className="table-header-button-container">
             <button
               className="table-header-button"
-              onClick={() => {}}
+              onClick={handleClickSettings}
               onMouseOver={() => {
                 showHelp("help-settings-app");
               }}

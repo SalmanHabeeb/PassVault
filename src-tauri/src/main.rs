@@ -177,6 +177,19 @@ impl AuthState {
         Ok(())
     }
 
+    fn set_new_password(&mut self, current_password: String, new_password: String) -> Result<bool, String> {
+        let iv = [0x24; 16];
+        let mut key = [0x42; 16]; // Can be any desired size
+        let salt: String = std::iter::repeat_with(fastrand::alphanumeric).take(16).collect();
+        self.salt = Some(salt);
+        Argon2::default().hash_password_into(new_password.as_bytes(), self.salt.clone().unwrap().as_bytes(), &mut key).map_err(|e| e.to_string())?;
+        let mut buf = [0u8; 48];
+        let ciphertext = Aes128CbcEnc::new(&key.into(), &iv.into())
+                    .encrypt_padded_b2b_mut::<Pkcs7>(&self.encryption_key.clone().unwrap().as_slice(), &mut buf)
+                    .unwrap();
+        self.encryption_key_enc = Some(ciphertext[0..32].try_into().unwrap());
+        Ok(true)
+    }
     
 
     fn load_from_file(&mut self, file_path: &str) -> Result<bool, String> {
@@ -276,7 +289,6 @@ impl AuthState {
             }
         } else {
             self.encryption_key = None;
-            self.master_password_hash = None;
             return false;
         }
     }
@@ -590,6 +602,27 @@ async fn start_app() -> Result<StartAppResponse, String> {
     });
 }
 
+#[tauri::command]
+fn change_password(current_password: String, new_password: String) -> Result<SuccessResponse, String> {
+    let mut response = SuccessResponse{
+        success: true,
+        authorized: true,
+    };
+    let mut auth_state_ref = AUTH_STATE.lock().unwrap();
+
+    if verify(current_password.clone(), auth_state_ref.get_master_password_hash().unwrap().as_str()).unwrap() {
+        let hashed_new_password = hash(new_password.clone(), DEFAULT_COST).unwrap();
+        let result = auth_state_ref.set_encryption_key(current_password.clone());
+        auth_state_ref.set_new_password(current_password, new_password);
+        auth_state_ref.set_password_hash(hashed_new_password);
+        auth_state_ref.save_to_file("passvault.bin");
+    } else {
+        response.success = false;
+        response.authorized = false;
+    }
+    Ok(response)
+}
+
 
 #[tauri::command]
 fn get_key() -> Vec<u8> {
@@ -837,7 +870,7 @@ print!("Yes, {:?}", ct);
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, edit_entry, get_password, authenticate, authorize, start_app, lock_app])
+        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, edit_entry, get_password, authenticate, authorize, change_password, start_app, lock_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
