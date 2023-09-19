@@ -30,6 +30,7 @@ argon2 = "0.5.1"
 hex-literal = "0.4.1"
 typenum = "1.16.0"
 hex = "0.4.3"
+fastrand = "2.0.0"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem and the built-in dev server is disabled.

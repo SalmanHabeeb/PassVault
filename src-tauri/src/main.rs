@@ -37,13 +37,12 @@ type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
 
 use argon2::{
     password_hash::{
-        rand_core::OsRng,
         PasswordHash, PasswordHasher, PasswordVerifier, SaltString
     },
     Argon2
 };
 
-use rand::{Rng, thread_rng};
+use rand::{Rng, thread_rng, rngs::OsRng};
 
 // extern crate aes;
 // extern crate pbkdf2;
@@ -84,6 +83,7 @@ struct PasswordLessEntry {
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
 struct PasswordEntry {
     password: String,
+    salt: String,
 }
 
 // Define a struct to represent the response object
@@ -103,7 +103,7 @@ struct AuthState {
     encryption_key: Option<Vec<u8>>,
     encryption_key_enc: Option<[u8; 32]>,
     time_of_entry: DateTime<Utc>,
-    salt: String,
+    salt: Option<String>,
     auth: bool,
 }
 
@@ -114,7 +114,7 @@ impl AuthState {
     fn new() -> Self {
         let time_of_entry = Utc::now();
         let auth = false;
-        let salt = "example salt".to_string();
+        let salt = None;
         AuthState {
             master_password: None,
             master_password_hash: None,
@@ -149,6 +149,13 @@ impl AuthState {
         })?;
         }
 
+        if let Some(ref salt) = self.salt {
+            writeln!(file, "salt: {}", salt).map_err(|e| {
+                    e.to_string() // Convert the error to a string using to_string
+                }
+            )?;
+        }
+
         Ok(())
     }
 
@@ -158,10 +165,11 @@ impl AuthState {
         self.encryption_key = Some(enckey.to_vec());
         let iv = [0x24; 16];
         let mut output_key_material = [0x42; 16]; // Can be any desired size
-        Argon2::default().hash_password_into(master_password.as_bytes(), self.salt.as_bytes(), &mut output_key_material).map_err(|e| e.to_string())?;
+        let salt: String = std::iter::repeat_with(fastrand::alphanumeric).take(16).collect();
+        self.salt = Some(salt);
+        Argon2::default().hash_password_into(master_password.as_bytes(), self.salt.clone().unwrap().as_bytes(), &mut output_key_material).map_err(|e| e.to_string())?;
         let mut key = output_key_material;
         let mut buf = [0u8; 48];
-
         let ct = Aes128CbcEnc::new(&key.into(), &iv.into())
                     .encrypt_padded_b2b_mut::<Pkcs7>(&enckey, &mut buf)
                     .unwrap();
@@ -183,10 +191,10 @@ impl AuthState {
         // For simplicity, you can split the contents into lines and process each line accordingly.
         let mut counter = 0;
         for line in contents.lines() {
-            if line.starts_with("master_password_hash:") {
+            if line.starts_with("master_password_hash: ") {
                 counter += 1;
                 self.master_password_hash = Some(line.trim_start_matches("master_password_hash: ").to_string());
-            } else if line.starts_with("encryption_key_enc:") {
+            } else if line.starts_with("encryption_key_enc: ") {
                 let mut key_enc_str = line.trim_start_matches("encryption_key_enc: ").to_string();
                 key_enc_str.retain(|c| c != ' '); // Remove spaces
                 let mut key_enc = [0; 32];
@@ -195,10 +203,13 @@ impl AuthState {
                 })?;
                 self.encryption_key_enc = Some(key_enc);
                 counter+=1;
+            } else if line.starts_with("salt: ") {
+                self.salt = Some(line.trim_start_matches("salt: ").to_string());
+                counter+=1;
             }
             // Add more parsing logic for other fields as needed
         }
-        if counter == 2 {
+        if counter == 3 {
             Ok(true)
         } else {
             Ok(false)
@@ -217,7 +228,7 @@ impl AuthState {
     fn set_encryption_key(&mut self, password: String) -> Result<(), String> {
         let mut rng = thread_rng();
         let mut key = [0x42; 16]; // Can be any desired size
-        Argon2::default().hash_password_into(password.as_bytes(), self.salt.as_bytes(), &mut key).map_err(|e| e.to_string())?;
+        Argon2::default().hash_password_into(password.as_bytes(), self.salt.clone().unwrap().as_bytes(), &mut key).map_err(|e| e.to_string())?;
         let iv = [0x24; 16];
 
         let mut buf = [0u8; 48];
@@ -344,7 +355,7 @@ async fn get_entries() -> Result<GetEntriesResponse, String> {
 struct GetPasswordResponse {
     success: bool,
     authorized: bool,
-    entry: Option<PasswordEntry>,
+    password: Option<String>,
 }
 
 #[tauri::command]
@@ -353,7 +364,7 @@ async fn get_password(site: String, username: String) -> Result<GetPasswordRespo
     let mut response = GetPasswordResponse {
         success: false,
         authorized,
-        entry: None,
+        password: None,
     };
 
     if authorized {
@@ -385,7 +396,7 @@ async fn get_password(site: String, username: String) -> Result<GetPasswordRespo
         let bytes: &[u8] = hex_bytes.as_slice();
         let pt_len = bytes.len();
 
-        let salt = b"example salt";
+        let salt = entry.salt.as_str().as_bytes();
         let mut key = [0x42; 16];
         Argon2::default().hash_password_into(enc_key, salt, &mut key).map_err(|e| e.to_string())?;
 
@@ -400,12 +411,8 @@ async fn get_password(site: String, username: String) -> Result<GetPasswordRespo
             Err(e) => panic!("Invalid UTF-8: {}", e), // If failed, panic with the error
         };
 
-        let password_entry  = PasswordEntry {
-            password: s2,
-        };
-
         // Use the query result directly in the match statement
-        response.entry = Some(password_entry);
+        response.password = Some(s2);
         response.success = true;
     }
 
@@ -505,7 +512,7 @@ async fn start_app() -> Result<StartAppResponse, String> {
                 .map_err(|e| e.to_string())?;
 
     let conn: &mut SqliteConnection = &mut conn_value;
-    sqlx::query("CREATE TABLE PASSWORD_DATABASE('site' VARCHAR(255), 'username' VARCHAR(255), 'password' VARCHAR(255), UNIQUE('site','username'))")
+    sqlx::query("CREATE TABLE PASSWORD_DATABASE('site' VARCHAR(255), 'username' VARCHAR(255), 'password' VARCHAR(255), 'salt' VARCHAR(255), UNIQUE('site','username'))")
             .execute(conn)
             .await
             .map_err(|e| e.to_string()).unwrap_or_default();
@@ -590,15 +597,15 @@ async fn write_entry(site: String, username: String, password: String) -> Result
         let bytes: &[u8] = password.as_bytes();
         let pt_len = bytes.len();
 
-        let salt = b"example salt";
+        let salt: String = std::iter::repeat_with(fastrand::alphanumeric).take(16).collect();
         let mut key = [0x42; 16];
-        Argon2::default().hash_password_into(enc_key, salt, &mut key).map_err(|e| e.to_string())?;
+        Argon2::default().hash_password_into(enc_key, &salt.as_str().as_bytes(), &mut key).map_err(|e| e.to_string())?;
         
-        let ct = Aes128CbcEnc::new(&key.into(), &iv.into())
+        let ciphertext = Aes128CbcEnc::new(&key.into(), &iv.into())
             .encrypt_padded_b2b_mut::<Pkcs7>(&bytes, &mut buf)
             .unwrap();
 
-        let enc_password = hex::encode(ct);
+        let enc_password = hex::encode(ciphertext);
 
         // let mut buf = [0u8; 48];
         // let pt = Aes128CbcDec::new(&key.into(), &iv.into())
@@ -609,10 +616,11 @@ async fn write_entry(site: String, username: String, password: String) -> Result
         //     Err(e) => panic!("Invalid UTF-8: {}", e), // If failed, panic with the error
         // };
 
-        sqlx::query("INSERT INTO PASSWORD_DATABASE VALUES ($1, $2, $3)")
+        sqlx::query("INSERT INTO PASSWORD_DATABASE VALUES ($1, $2, $3, $4)")
             .bind(site)
             .bind(username)
             .bind(enc_password)
+            .bind(salt)
             .execute(conn)
             .await
             .map_err(|e| e.to_string())?;

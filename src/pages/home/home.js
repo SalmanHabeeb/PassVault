@@ -168,7 +168,7 @@ function HomePage() {
           return;
         }
         console.log(response);
-        password = response.entry.password;
+        password = response.password;
         const updatedSiteObjects = [...siteObjects];
         updatedSiteObjects[index] = {
           ...updatedSiteObjects[index],
@@ -330,7 +330,7 @@ function HomePage() {
       });
       console.log(response);
       if (response.authorized) {
-        password = response.entry.password;
+        password = response.password;
       } else {
         runAuthFlow();
         prevOp.current = copyToClipBoard;
