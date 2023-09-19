@@ -37,3 +37,8 @@ code {
   -moz-font-feature-settings: "liga";
   -moz-osx-font-smoothing: grayscale;
 }
+
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

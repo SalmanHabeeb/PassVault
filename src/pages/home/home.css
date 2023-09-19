@@ -63,11 +63,49 @@
   width: 80%;
 }
 
+.password-dialog__input-container {
+  position: relative;
+}
+
 /* Style the input fields */
 .password-dialog__input {
   width: 100%;
   padding: 10px;
   margin-bottom: 10px;
+}
+
+.toggle-password {
+  color: blue;
+  position: absolute;
+  top: 17%;
+  right: -8%;
+  cursor: pointer;
+}
+
+.password-dialog__suggest-password {
+  position: absolute;
+  top: 145px;
+  background-color: white;
+  color: black;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 264px;
+  height: 40px;
+  margin-top: 68px;
+
+  font-size: 0.7rem;
+  line-height: 40px;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+.password-dialog__suggest-password:hover {
+  background-color: #ccc;
 }
 
 .password-dialog__form-button-container {
@@ -198,18 +236,28 @@
   margin-top: 20px;
 }
 
+.site-table tr {
+  background-color: #111212;
+}
+
+.site-table tr:hover {
+  background-color: #111212;
+}
+
+.site-table .site-table__row {
+  background-color: #111212;
+  border: 5px solid black;
+  box-sizing: border-box;
+}
+
+.site-table .site-table__row:hover {
+  background-color: #25282b;
+}
+
 .site-table th,
 .site-table td {
-  border: 1px solid blue;
+  border: none;
   padding: 10px;
-}
-
-.site-table th {
-  background-color: black;
-}
-
-.site-table td {
-  background-color: black;
 }
 
 .site-table td:first-child {

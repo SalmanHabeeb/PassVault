@@ -117,13 +117,91 @@ impl AuthState {
         let salt = "example salt".to_string();
         AuthState {
             master_password: None,
-            master_password_hash: Some("$2b$12$Rov4tLdIG/9HfBnKaqxR/ORWwGgsEUw0yPE4cMSTBqXMUxuWcAC5.".to_string()),
+            master_password_hash: None,
             k2k: None,
             encryption_key:None,
-            encryption_key_enc:Some([7, 199, 26, 87, 127, 67, 163, 169, 14, 134, 92, 249, 245, 151, 233, 194, 174, 134, 218, 37, 99, 160, 160, 251, 146, 183, 128, 78, 160, 246, 212, 253]),
+            encryption_key_enc:None,
             time_of_entry,
             salt,
             auth,
+        }
+    }
+
+    fn save_to_file(&mut self, file_path: &str) -> Result<(), String> {
+        let mut file = File::create(file_path).map_err(|e| {
+            e.to_string() // Convert the error to a string using to_string
+        })?;
+
+        // Write master_password_hash to the file
+        println!("136: {:?}", self.master_password_hash);
+        if let Some(ref hash) = self.master_password_hash {
+            writeln!(file, "master_password_hash: {}", hash).map_err(|e| {
+                    e.to_string() // Convert the error to a string using to_string
+                }
+            )?;
+        }
+
+        // Write encryption_key_enc to the file
+        if let Some(enc_key) = self.encryption_key_enc {
+            let enc_key_hex = hex::encode(enc_key);
+            writeln!(file, "encryption_key_enc: {}", enc_key_hex).map_err(|e| {
+            e.to_string() // Convert the error to a string using to_string
+        })?;
+        }
+
+        Ok(())
+    }
+
+    fn set_new_key(&mut self, master_password: String) -> Result<(), String> {
+        let mut rng = thread_rng();
+        let enckey: [u8; 16] = rng.gen();
+        self.encryption_key = Some(enckey.to_vec());
+        let iv = [0x24; 16];
+        let mut output_key_material = [0x42; 16]; // Can be any desired size
+        Argon2::default().hash_password_into(master_password.as_bytes(), self.salt.as_bytes(), &mut output_key_material).map_err(|e| e.to_string())?;
+        let mut key = output_key_material;
+        let mut buf = [0u8; 48];
+
+        let ct = Aes128CbcEnc::new(&key.into(), &iv.into())
+                    .encrypt_padded_b2b_mut::<Pkcs7>(&enckey, &mut buf)
+                    .unwrap();
+        self.encryption_key_enc = Some(ct[0..32].try_into().unwrap());
+        Ok(())
+    }
+
+    fn load_from_file(&mut self, file_path: &str) -> Result<bool, String> {
+        let mut file = File::open(file_path).map_err(|e| {
+            e.to_string() // Convert the error to a string using to_string
+        })?;
+
+        let mut contents = String::new();
+        file.read_to_string(&mut contents).map_err(|e| {
+            e.to_string() // Convert the error to a string using to_string
+        })?;
+
+        // Parse the file contents and update auth_state fields
+        // For simplicity, you can split the contents into lines and process each line accordingly.
+        let mut counter = 0;
+        for line in contents.lines() {
+            if line.starts_with("master_password_hash:") {
+                counter += 1;
+                self.master_password_hash = Some(line.trim_start_matches("master_password_hash: ").to_string());
+            } else if line.starts_with("encryption_key_enc:") {
+                let mut key_enc_str = line.trim_start_matches("encryption_key_enc: ").to_string();
+                key_enc_str.retain(|c| c != ' '); // Remove spaces
+                let mut key_enc = [0; 32];
+                hex::decode_to_slice(key_enc_str, &mut key_enc).map_err(|e| {
+                    e.to_string() // Convert the error to a string using to_string
+                })?;
+                self.encryption_key_enc = Some(key_enc);
+                counter+=1;
+            }
+            // Add more parsing logic for other fields as needed
+        }
+        if counter == 2 {
+            Ok(true)
+        } else {
+            Ok(false)
         }
     }
 
@@ -132,9 +210,12 @@ impl AuthState {
         self.auth = auth;
     }
 
+    fn set_password_hash(&mut self, hashed_password: String) {
+        self.master_password_hash = Some(hashed_password);
+    }
+
     fn set_encryption_key(&mut self, password: String) -> Result<(), String> {
         let mut rng = thread_rng();
-
         let mut key = [0x42; 16]; // Can be any desired size
         Argon2::default().hash_password_into(password.as_bytes(), self.salt.as_bytes(), &mut key).map_err(|e| e.to_string())?;
         let iv = [0x24; 16];
@@ -151,9 +232,7 @@ impl AuthState {
     }
 
     fn get_encryption_key(&mut self) -> Vec<u8> {
-        self.encryption_key.take().unwrap_or_else(|| {
-            Vec::new()
-        })
+        self.encryption_key.clone().unwrap_or_default()
     }
 
     fn get_master_password_hash(&mut self)  -> Option<String> {
@@ -178,6 +257,7 @@ impl AuthState {
             }
         } else {
             self.encryption_key = None;
+            self.master_password_hash = None;
             return false;
         }
     }
@@ -193,7 +273,7 @@ impl DataBase {
     }
     async fn connect(&mut self) -> Result<(), String> {
         if self.conn.is_none() {
-            let filename = "../passvault.db";
+            let filename = "./passvault.db";
             let mut options = SqliteConnectOptions::new()
                 .filename(filename);
 
@@ -219,7 +299,7 @@ struct GetEntriesResponse {
 
 #[tauri::command]
 async fn get_entries() -> Result<GetEntriesResponse, String> {
-    let authorized = authorize().await;
+    let authorized = authorize();
     let mut response = GetEntriesResponse {
         success: false,
         authorized,
@@ -227,7 +307,7 @@ async fn get_entries() -> Result<GetEntriesResponse, String> {
     };
 
     if authorized {
-        let filename = "../passvault.db";
+        let filename = "./passvault.db";
         let options = SqliteConnectOptions::new().filename(filename);
 
         let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
@@ -264,7 +344,7 @@ struct GetPasswordResponse {
 
 #[tauri::command]
 async fn get_password(site: String, username: String) -> Result<GetPasswordResponse, String> {
-    let authorized = authorize().await;
+    let authorized = authorize();
     let mut response = GetPasswordResponse {
         success: false,
         authorized,
@@ -272,7 +352,7 @@ async fn get_password(site: String, username: String) -> Result<GetPasswordRespo
     };
 
     if authorized {
-        let filename = "../passvault.db";
+        let filename = "./passvault.db";
         let options = SqliteConnectOptions::new().filename(filename);
 
         let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
@@ -290,8 +370,8 @@ async fn get_password(site: String, username: String) -> Result<GetPasswordRespo
 
         // Unwrap the query result only once and assign it to a variable
         let entry = query_result.unwrap();
-
-        let encryption_key = get_key().await;
+        let encryption_key = get_key();
+        println!("368: {:?}", encryption_key);
         let enc_key: &[u8] = encryption_key.as_slice();
 
         let iv = [0x24; 16];
@@ -330,10 +410,10 @@ async fn get_password(site: String, username: String) -> Result<GetPasswordRespo
 
 #[tauri::command]
 async fn delete_entry(site: String, username: String) -> Result<SuccessResponse, String> {
-    let authorized = authorize().await;
+    let authorized = authorize();
 
     if authorized {
-        let filename = "../passvault.db";
+        let filename = "./passvault.db";
         let options = SqliteConnectOptions::new().filename(filename);
 
         let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
@@ -373,58 +453,109 @@ fn file_exists(file_path: &str) -> bool {
 }
 
 #[tauri::command]
-async fn authorize() -> bool {
+fn authorize() -> bool {
     let mut auth_state_ref = AUTH_STATE.lock().unwrap();
+    let filepath: &str = "./passvault.bin";
     return auth_state_ref.is_authorized();
 }
 
+#[derive(Serialize, Deserialize)]
+struct Exists {
+    exists: String,
+}
+
+fn load_auth(filepath: &str) -> bool {
+    let mut auth_state_ref = AUTH_STATE.lock().unwrap();
+    auth_state_ref.load_from_file(filepath).unwrap()
+}
+
+#[derive(Serialize)]
+struct StartAppResponse {
+    success: bool,
+    is_new_user: bool,
+    config_good: bool,
+}
+
 #[tauri::command]
-async fn get_key() -> Vec<u8> {
+async fn start_app() -> Result<StartAppResponse, String> {
+    let filepath: &str = "./passvault.bin";
+    let database_path: &str = "./passvault.db";
+    let mut config_good = true;
+    let mut is_new_user = false;
+    if file_exists(filepath) {
+        config_good = load_auth(filepath);
+    } else {
+        is_new_user = true;
+    }
+
+    // Check if the file exists
+    if !file_exists(database_path) {
+        let mut file = File::create(database_path)
+                        .map_err(|e| e.to_string())?;
+    }
+
+    let options = SqliteConnectOptions::new().filename(database_path);
+    let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
+                .await
+                .map_err(|e| e.to_string())?;
+
+    let conn: &mut SqliteConnection = &mut conn_value;
+    sqlx::query("CREATE TABLE PASSWORD_DATABASE('site' VARCHAR(255), 'username' VARCHAR(255), 'password' VARCHAR(255), UNIQUE('site','username'))")
+            .execute(conn)
+            .await
+            .map_err(|e| e.to_string()).unwrap_or_default();
+    return Ok(StartAppResponse{
+        success: true,
+        is_new_user: is_new_user,
+        config_good: config_good,
+    });
+}
+
+
+#[tauri::command]
+fn get_key() -> Vec<u8> {
     let mut auth_state_ref = AUTH_STATE.lock().unwrap();
     return auth_state_ref.get_encryption_key();
 }
 
 #[tauri::command]
-fn authenticate(master_password: String) -> Result<bool, String> {
+async fn authenticate(master_password: String) -> Result<bool, String> {
     // Open the file for reading
     let mut auth_state_ref = AUTH_STATE.lock().unwrap();
 
     let filepath: &str = "./passvault.bin";
     if file_exists(filepath) {
-        let mut file = File::open(filepath).map_err(|e| {
-            e.to_string() // Convert the error to a string using to_string
-        })?;
-        
-        // Read the content from the file into a buffer
-        let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer).map_err(|e| {
-            e.to_string() // Convert the error to a string using to_string
-        })?;
-        
-        // Convert the buffer to a String
-        let content = String::from_utf8_lossy(&buffer);
-        
-        if verify(master_password.clone(), auth_state_ref.get_master_password_hash().unwrap().as_str()).unwrap() {
-            let result = auth_state_ref.set_encryption_key(master_password);
-            Ok(true)
+        let success_loading = auth_state_ref.load_from_file(filepath);
+        if (success_loading.unwrap())  {
+            if verify(master_password.clone(), auth_state_ref.get_master_password_hash().unwrap().as_str()).unwrap() {
+                let result = auth_state_ref.set_encryption_key(master_password);
+                Ok(true)
+            } else {
+                Ok(false)
+            }
         } else {
             Ok(false)
         }
     } else {
 
-        let hashed_password = hash(master_password, DEFAULT_COST).unwrap();
+        let hashed_password = hash(master_password.clone(), DEFAULT_COST).unwrap();
 
         // Create or open the file for writing
         let mut file = File::create(filepath).map_err(|e| {
             e.to_string() // Convert the error to a string using to_string
         })?;
 
-        let bytes = hashed_password.as_bytes();
+        auth_state_ref.set_new_key(master_password);
+        auth_state_ref.set_password_hash(hashed_password);
+        println!("{}", auth_state_ref.get_master_password_hash().unwrap().as_str());
+        auth_state_ref.save_to_file(filepath);
+        auth_state_ref.load_from_file(filepath);
+        auth_state_ref.set_auth(true);
 
         // Write the data to the file
-        file.write_all(bytes).map_err(|e| {
-            e.to_string() // Convert the error to a string using to_string
-        })?;
+        // file.write_all(bytes).map_err(|e| {
+        //     e.to_string() // Convert the error to a string using to_string
+        // })?;
         Ok(true)
     }
 }
@@ -433,10 +564,10 @@ use typenum::U16;
 
 #[tauri::command]
 async fn write_entry(site: String, username: String, password: String) -> Result<SuccessResponse, String> {
-    let authorized = authorize().await;
+    let authorized = authorize();
 
     if authorized {
-        let filename = "../passvault.db";
+        let filename = "./passvault.db";
         let options = SqliteConnectOptions::new().filename(filename);
 
         let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
@@ -445,7 +576,7 @@ async fn write_entry(site: String, username: String, password: String) -> Result
 
         let conn: &mut SqliteConnection = &mut conn_value;
 
-        let encryption_key = get_key().await;
+        let encryption_key = get_key();
         let enc_key: &[u8] = encryption_key.as_slice();
         print!("Hello, {:?}", enc_key);
 
@@ -620,7 +751,7 @@ print!("Yes, {:?}", ct);
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, get_password, authenticate, authorize])
+        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, get_password, authenticate, authorize, start_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

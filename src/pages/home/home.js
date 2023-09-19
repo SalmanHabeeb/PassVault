@@ -11,6 +11,11 @@ function HomePage() {
   const [siteObjects, setSiteObjects] = useState([]);
   const [greeting, setGreeting] = useState("None");
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  const [showGeneratePassword, setShowGeneratePassword] = useState(false);
+  const [safePassword, setSafePassword] = useState("");
+  const generateRandomPasswordRef = useRef(null);
+
   const prevOp = useRef(null);
   const [prevOpArgs, setPrevOpArgs] = useState([]);
 
@@ -19,10 +24,61 @@ function HomePage() {
   const [showPassword, setShowPassword] = useState(
     new Array(siteObjects.length).fill(false)
   );
+
+  const [showNewPassword, setShowNewPassword] = useState(false);
+
   const [clickedCopy, setClickedCopy] = useState(
     new Array(siteObjects.length).fill(false)
   );
   var timeoutId = null;
+
+  const handleOutsideClick = (event) => {
+    if (
+      generateRandomPasswordRef.current &&
+      !generateRandomPasswordRef.current.contains(event.target)
+    ) {
+      // setShowGeneratePassword(false);
+    }
+  };
+
+  const generateRandomPassword = () => {
+    let buffer = new Uint32Array(1);
+    window.crypto.getRandomValues(buffer);
+    const length = (buffer[0] % 9) + 8;
+    const charset =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+";
+    let password = [];
+    buffer = new Uint32Array(length);
+
+    window.crypto.getRandomValues(buffer);
+
+    for (let i = 0; i < length; i++) {
+      password.push(charset[buffer[i] % charset.length]);
+    }
+    console.log(password);
+
+    return password.join("");
+  };
+
+  const handleClickGeneratePassword = (password) => {
+    console.log(document.getElementById("password-dialog__form"));
+    document.getElementById("password-dialog__form").password.value = password;
+    setShowGeneratePassword(false);
+  };
+
+  const handlePasswordChange = () => {
+    console.log("LINE 67");
+    if (!document.getElementById("password-dialog__form").checkValidity()) {
+      console.log("LINE 69");
+      setSafePassword(generateRandomPassword());
+      setShowGeneratePassword(true);
+      console.log(showGeneratePassword);
+    }
+  };
+
+  const handleToggleShowNewPassword = () => {
+    setShowNewPassword(!showNewPassword);
+  };
 
   const handleInvalidPassword = () => {
     document.getElementById("invalid-password-dialog").showModal();
@@ -156,6 +212,7 @@ function HomePage() {
     e.target.site.value = "";
     e.target.username.value = "";
     e.target.password.value = "";
+    setShowNewPassword(false);
   };
 
   const triggerDeleteEntryFlow = (index) => {
@@ -240,13 +297,13 @@ function HomePage() {
   };
 
   useEffect(() => {
-    invoke("greet", { name: "world" })
-      .then((response) => {
-        console.log(response);
-      })
-      .catch((error) => {
-        console.error(error);
-      });
+    // invoke("greet", { name: "world" })
+    //   .then((response) => {
+    //     console.log(response);
+    //   })
+    //   .catch((error) => {
+    //     console.error(error);
+    //   });
     getAllData();
     return () => {
       if (timeoutId) {
@@ -255,12 +312,34 @@ function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    document.addEventListener("click", handleOutsideClick);
+    return () => {
+      document.removeEventListener("click", handleOutsideClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    const dialog = document.getElementById("password-dialog");
+    dialog.addEventListener("click", (event) => {
+      // check if the user clicked outside of the dialog
+      if (
+        document.body.contains(dialog) &&
+        !generateRandomPasswordRef.current.contains(event.target)
+      ) {
+        // set showGeneratePassword to false
+        setShowGeneratePassword(false);
+      }
+    });
+  }, []);
+
   return (
     <div id="Home">
       <dialog id="password-dialog" className="password-dialog">
         <p>Enter new password</p>
         <form
           method="dialog"
+          id="password-dialog__form"
           className="password-dialog__form"
           onSubmit={handleCreateNewEntrySubmit}
         >
@@ -282,15 +361,64 @@ function HomePage() {
             autoComplete="username"
             required
           />
-          <input
-            className="password-dialog__input"
-            type="password"
-            key={3}
-            name="password"
-            placeholder="Password"
-            autoComplete="new-password"
-            required
-          />
+          <div className="password-dialog__input-container">
+            <input
+              className="password-dialog__input"
+              type={showNewPassword ? "text" : "password"}
+              key={3}
+              name="password"
+              placeholder="Password"
+              autoComplete="new-password"
+              onChange={handlePasswordChange}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  if (!showGeneratePassword) {
+                    setSafePassword(generateRandomPassword());
+                    setShowGeneratePassword(true);
+                  }
+                  console.log(
+                    document.getElementById("password-dialog__form")
+                      .password_suggest
+                  );
+                  generateRandomPasswordRef.current.focus();
+                }
+              }}
+              required
+            />
+            <span
+              className="toggle-password"
+              onClick={handleToggleShowNewPassword}
+            >
+              <i className="material-icons">
+                {showNewPassword ? "visibility_off" : "visibility"}
+              </i>
+            </span>
+          </div>
+          <div
+            ref={generateRandomPasswordRef}
+            className="password-dialog__suggest-password"
+            name="password_suggest"
+            style={{ display: showGeneratePassword ? "block" : "none" }}
+            tabIndex={0}
+            onClick={() => handleClickGeneratePassword(safePassword)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleClickGeneratePassword(safePassword);
+              }
+              if (e.key === "ArrowDown") {
+                document
+                  .getElementById("password-dialog__form")
+                  .password.focus();
+              }
+              if (e.key === "ArrowUp") {
+                document
+                  .getElementById("password-dialog__form")
+                  .password.focus();
+              }
+            }}
+          >
+            Use Secure Password:{` ${safePassword}`}
+          </div>
           <div className="password-dialog__form-button-container">
             <button className="password-dialog__form-button" type="submit">
               Save
@@ -312,6 +440,7 @@ function HomePage() {
                   "password-dialog"
                 ).children[1].password.value = "";
                 document.getElementById("password-dialog").close();
+                setShowNewPassword(false);
               }}
             >
               Cancel
@@ -350,6 +479,7 @@ function HomePage() {
               className="confirm-delete-dialog__form-button"
               type="button"
               onClick={handleDeleteCancel}
+              autoFocus
             >
               No
             </button>
@@ -393,14 +523,14 @@ function HomePage() {
               <tr>
                 <th>Site</th>
                 <th>Username</th>
-                <th style={{ borderRight: "none" }}>Password</th>
-                <th style={{ borderLeft: "none" }}></th>
+                <th>Password</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {siteObjects.map((siteObject, index) => (
                 <>
-                  <tr key={index}>
+                  <tr className="site-table__row" key={index}>
                     <td>{siteObject.site}</td>
                     <td>{siteObject.username}</td>
                     <td style={{ width: "30%", borderRight: "none" }}>
