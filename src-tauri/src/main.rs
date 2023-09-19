@@ -243,6 +243,11 @@ impl AuthState {
         return self.time_of_entry;
     }
 
+    fn remove_auth(&mut self) {
+        self.set_auth(false);
+        self.is_authorized();
+    }
+
     fn is_authorized(&mut self) -> bool {
         if self.auth {
             let current_time = Utc::now();
@@ -626,6 +631,13 @@ async fn write_entry(site: String, username: String, password: String) -> Result
     }
 }
 
+#[tauri::command]
+fn lock_app() -> bool {
+    let mut auth_state_ref = AUTH_STATE.lock().unwrap();
+    auth_state_ref.remove_auth();
+    return true;
+}
+
 // fn encrypt(plaintext: &[u8], key: &[u8; 16]) -> Vec<u8> {
 //     let cipher = aes::Aes128::new(&key);
 //     let mut ciphertext = plaintext.to_vec();
@@ -751,7 +763,7 @@ print!("Yes, {:?}", ct);
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, get_password, authenticate, authorize, start_app])
+        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, get_password, authenticate, authorize, start_app, lock_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

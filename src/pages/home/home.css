@@ -30,6 +30,32 @@
   justify-content: space-between;
 }
 
+.table-header-button-container {
+  position: relative;
+}
+
+.help {
+  display: none;
+  position: absolute;
+  background-color: #0c0c0c;
+  color: #fff;
+  top: 55px;
+  padding: 5px;
+  border-radius: 5px;
+  z-index: 1;
+}
+
+.arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 8px;
+  border-color: transparent transparent #0c0c0c transparent;
+  top: -16px;
+  left: 10%;
+}
+
 .table-header-button {
   width: 50px;
   height: 50px;
@@ -151,6 +177,17 @@
   width: 80%;
 }
 
+.auth-dialog__input-container {
+  position: relative;
+}
+
+.auth-dialog__eye-icon {
+  position: absolute;
+  top: 20%;
+  right: -8%;
+  color: blue;
+}
+
 /* Style the input fields */
 .auth-dialog__input {
   width: 100%;
@@ -237,21 +274,21 @@
 }
 
 .site-table tr {
-  background-color: #111212;
+  background-color: #060606;
 }
 
 .site-table tr:hover {
-  background-color: #111212;
+  background-color: #060606;
 }
 
 .site-table .site-table__row {
-  background-color: #111212;
-  border: 5px solid black;
+  background-color: #060606;
+  border: 3px solid black;
   box-sizing: border-box;
 }
 
 .site-table .site-table__row:hover {
-  background-color: #25282b;
+  background-color: #0c0c0c;
 }
 
 .site-table th,

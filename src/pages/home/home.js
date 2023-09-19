@@ -26,11 +26,26 @@ function HomePage() {
   );
 
   const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showAuthPassword, setShowAuthPassword] = useState(false);
 
   const [clickedCopy, setClickedCopy] = useState(
     new Array(siteObjects.length).fill(false)
   );
   var timeoutId = null;
+
+  const showHelp = (id) => {
+    const tooltip = document.getElementById(id);
+    if (tooltip) {
+      tooltip.style.display = "block";
+    }
+  };
+
+  const hideHelp = (id) => {
+    const tooltip = document.getElementById(id);
+    if (tooltip) {
+      tooltip.style.display = "none";
+    }
+  };
 
   const handleOutsideClick = (event) => {
     if (
@@ -78,6 +93,27 @@ function HomePage() {
 
   const handleToggleShowNewPassword = () => {
     setShowNewPassword(!showNewPassword);
+    const inputElement = document.getElementById(
+      "password-dialog__form"
+    ).password;
+    inputElement.focus();
+    const inputValue = inputElement.value;
+    inputElement.focus();
+    inputElement.value = "";
+    setTimeout(() => {
+      inputElement.value = inputValue;
+    }, 0);
+  };
+
+  const handleToggleShowAuthPassword = (event) => {
+    setShowAuthPassword(!showAuthPassword);
+    const inputElement = document.getElementById("auth-dialog__form").password;
+    const inputValue = inputElement.value;
+    inputElement.focus();
+    inputElement.value = "";
+    setTimeout(() => {
+      inputElement.value = inputValue;
+    }, 0);
   };
 
   const handleInvalidPassword = () => {
@@ -107,6 +143,12 @@ function HomePage() {
 
   const runAuthFlow = () => {
     document.getElementById("auth-dialog").showModal();
+  };
+
+  const handleCancelAuthFlow = () => {
+    document.getElementById("auth-dialog__form").password.value = "";
+    setShowAuthPassword(false);
+    document.getElementById("auth-dialog").close();
   };
 
   const handleToggleShowPassword = async (index) => {
@@ -163,6 +205,37 @@ function HomePage() {
     setShowAddDialog(true);
     document.getElementById("password-dialog").showModal();
     console.log("show dialog");
+  };
+
+  const handleLockPasswords = async () => {
+    try {
+      let result = await invoke("lock_app", {});
+      if (result) {
+        const updatedSiteObjects = [...siteObjects];
+        updatedSiteObjects.map((item) => {
+          item.password = "password";
+          return item;
+        });
+        setSiteObjects(updatedSiteObjects);
+        const updatedShowPassword = new Array(showPassword.length);
+        updatedShowPassword.fill(false);
+        setShowPassword(updatedShowPassword);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleLockApp = async () => {
+    try {
+      let result = await invoke("lock_app", {});
+      if (result) {
+        dispatch(loginActions.setIsLoggedIn(false));
+        sessionStorage.clear();
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const executeFunc = async (func, args) => {
@@ -333,6 +406,37 @@ function HomePage() {
     });
   }, []);
 
+  const handleWindowKeyDown = (event) => {
+    if (
+      event.ctrlKey &&
+      ((event.key === "L" && event.getModifierState("CapsLock")) ||
+        (event.key === "l" && !event.getModifierState("CapsLock")))
+    ) {
+      const button = document.getElementById(
+        "table-header-button-lock-passwords"
+      );
+      if (button) {
+        button.click();
+      }
+    } else if (
+      event.ctrlKey &&
+      ((event.key === "l" && event.getModifierState("CapsLock")) ||
+        (event.key === "L" && !event.getModifierState("CapsLock")))
+    ) {
+      const button = document.getElementById("table-header-button-lock-app");
+      if (button) {
+        button.click();
+      }
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("keydown", handleWindowKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleWindowKeyDown);
+    };
+  }, []);
+
   return (
     <div id="Home">
       <dialog id="password-dialog" className="password-dialog">
@@ -345,6 +449,7 @@ function HomePage() {
         >
           <input
             className="password-dialog__input"
+            id="password-dialog__site-input"
             type="text"
             key={1}
             name="site"
@@ -383,6 +488,7 @@ function HomePage() {
                   generateRandomPasswordRef.current.focus();
                 }
               }}
+              autoFocus
               required
             />
             <span
@@ -404,6 +510,10 @@ function HomePage() {
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleClickGeneratePassword(safePassword);
+                e.preventDefault();
+                document
+                  .getElementById("password-dialog__form")
+                  .password.focus();
               }
               if (e.key === "ArrowDown") {
                 document
@@ -476,6 +586,7 @@ function HomePage() {
               Yes
             </button>
             <button
+              id="confirm-delete-dialog__form-button-cancel"
               className="confirm-delete-dialog__form-button"
               type="button"
               onClick={handleDeleteCancel}
@@ -488,22 +599,45 @@ function HomePage() {
       </dialog>
       <dialog id="auth-dialog" className="auth-dialog">
         <form
+          id="auth-dialog__form"
           className="auth-dialog__form"
           method="dialog"
           onSubmit={handleAuth}
         >
-          <input
-            id="auth-dialog__input"
-            className="auth-dialog__input"
-            name="password"
-            type="password"
-            placeholder="Password"
-            autoComplete="new-password"
-            required
-            autoFocus
-          />
+          <div className="auth-dialog__input-container">
+            <input
+              id="auth-dialog__input"
+              className="auth-dialog__input"
+              name="password"
+              type={showAuthPassword ? "text" : "password"}
+              placeholder="Password"
+              autoComplete="new-password"
+              required
+              autoFocus
+            />
+            <span className="auth-dialog__eye-icon">
+              <i
+                className="material-icons"
+                onClick={(event) => handleToggleShowAuthPassword(event)}
+                style={{
+                  cursor: "pointer",
+                }}
+              >
+                {showAuthPassword ? "visibility_off" : "visibility"}
+              </i>
+            </span>
+          </div>
           <div className="auth-dialog__form-button-container">
-            <button className="auth-dialog__form-button">Unlock</button>
+            <button className="auth-dialog__form-button" type="submit">
+              Unlock
+            </button>
+            <button
+              className="auth-dialog__form-button"
+              type="button"
+              onClick={handleCancelAuthFlow}
+            >
+              Cancel
+            </button>
           </div>
         </form>
       </dialog>
@@ -513,9 +647,84 @@ function HomePage() {
       <div className="table-container">
         <div className="table-title">
           <h2>Saved Passwords</h2>
-          <button className="table-header-button" onClick={handleClickAdder}>
-            <i className="material-icons">add</i>
-          </button>
+          <div className="table-header-button-menu">
+            <div
+              className="table-header-button-container"
+              onMouseOver={() => {
+                showHelp("help-adder");
+              }}
+              onMouseOut={() => {
+                hideHelp("help-adder");
+              }}
+            >
+              <button
+                className="table-header-button"
+                onClick={handleClickAdder}
+              >
+                <i className="material-icons">add</i>
+              </button>
+              <div id="help-adder" className="help">
+                Add new password
+                <div className="arrow"></div>
+              </div>
+            </div>
+          </div>
+          <div className="table-header-button-container">
+            <button
+              id="table-header-button-lock-passwords"
+              className="table-header-button"
+              onClick={handleLockPasswords}
+              onMouseOver={() => {
+                showHelp("help-lock");
+              }}
+              onMouseOut={() => {
+                hideHelp("help-lock");
+              }}
+            >
+              <i className="material-icons">lock</i>
+            </button>
+            <div id="help-lock" className="help">
+              Lock the passwords
+              <div className="arrow"></div>
+            </div>
+          </div>
+          <div className="table-header-button-container">
+            <button
+              id="table-header-button-lock-app"
+              className="table-header-button"
+              onClick={handleLockApp}
+              onMouseOver={() => {
+                showHelp("help-lock-app");
+              }}
+              onMouseOut={() => {
+                hideHelp("help-lock-app");
+              }}
+            >
+              <i className="material-icons">exit_to_app</i>
+            </button>
+            <div id="help-lock-app" className="help">
+              Lock app
+              <div className="arrow"></div>
+            </div>
+          </div>
+          <div className="table-header-button-container">
+            <button
+              className="table-header-button"
+              onClick={() => {}}
+              onMouseOver={() => {
+                showHelp("help-settings-app");
+              }}
+              onMouseOut={() => {
+                hideHelp("help-settings-app");
+              }}
+            >
+              <i className="material-icons">settings</i>
+            </button>
+            <div id="help-settings-app" className="help">
+              Settings
+              <div className="arrow"></div>
+            </div>
+          </div>
         </div>
         {siteObjects ? (
           <table className="site-table">
