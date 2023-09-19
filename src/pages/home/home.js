@@ -853,61 +853,61 @@ function HomePage() {
                 <div className="arrow"></div>
               </div>
             </div>
-          </div>
-          <div className="table-header-button-container">
-            <button
-              id="table-header-button-lock-passwords"
-              className="table-header-button"
-              onClick={handleLockPasswords}
-              onMouseOver={() => {
-                showHelp("help-lock");
-              }}
-              onMouseOut={() => {
-                hideHelp("help-lock");
-              }}
-            >
-              <i className="material-icons">lock</i>
-            </button>
-            <div id="help-lock" className="help">
-              Lock the passwords
-              <div className="arrow"></div>
+            <div className="table-header-button-container">
+              <button
+                id="table-header-button-lock-passwords"
+                className="table-header-button"
+                onClick={handleLockPasswords}
+                onMouseOver={() => {
+                  showHelp("help-lock");
+                }}
+                onMouseOut={() => {
+                  hideHelp("help-lock");
+                }}
+              >
+                <i className="material-icons">lock</i>
+              </button>
+              <div id="help-lock" className="help">
+                Lock the passwords
+                <div className="arrow"></div>
+              </div>
             </div>
-          </div>
-          <div className="table-header-button-container">
-            <button
-              id="table-header-button-lock-app"
-              className="table-header-button"
-              onClick={handleLockApp}
-              onMouseOver={() => {
-                showHelp("help-lock-app");
-              }}
-              onMouseOut={() => {
-                hideHelp("help-lock-app");
-              }}
-            >
-              <i className="material-icons">exit_to_app</i>
-            </button>
-            <div id="help-lock-app" className="help">
-              Lock app
-              <div className="arrow"></div>
+            <div className="table-header-button-container">
+              <button
+                id="table-header-button-lock-app"
+                className="table-header-button"
+                onClick={handleLockApp}
+                onMouseOver={() => {
+                  showHelp("help-lock-app");
+                }}
+                onMouseOut={() => {
+                  hideHelp("help-lock-app");
+                }}
+              >
+                <i className="material-icons">exit_to_app</i>
+              </button>
+              <div id="help-lock-app" className="help">
+                Lock app
+                <div className="arrow"></div>
+              </div>
             </div>
-          </div>
-          <div className="table-header-button-container">
-            <button
-              className="table-header-button"
-              onClick={handleClickSettings}
-              onMouseOver={() => {
-                showHelp("help-settings-app");
-              }}
-              onMouseOut={() => {
-                hideHelp("help-settings-app");
-              }}
-            >
-              <i className="material-icons">settings</i>
-            </button>
-            <div id="help-settings-app" className="help">
-              Settings
-              <div className="arrow"></div>
+            <div className="table-header-button-container">
+              <button
+                className="table-header-button"
+                onClick={handleClickSettings}
+                onMouseOver={() => {
+                  showHelp("help-settings-app");
+                }}
+                onMouseOut={() => {
+                  hideHelp("help-settings-app");
+                }}
+              >
+                <i className="material-icons">settings</i>
+              </button>
+              <div id="help-settings-app" className="help">
+                Settings
+                <div className="arrow"></div>
+              </div>
             </div>
           </div>
         </div>

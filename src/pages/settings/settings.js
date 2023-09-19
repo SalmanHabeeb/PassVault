@@ -17,6 +17,7 @@ function SettingsPage() {
 
   const handleBackClick = () => {
     dispatch(loginActions.setSettings(false));
+    sessionStorage.removeItem("settings");
   };
 
   const handleToggleShowCurrentPassword = () => {
@@ -253,7 +254,6 @@ function SettingsPage() {
                         className="change-password-form__input-label"
                         name="newPassword"
                         type={showNewPassword ? "text" : "password"}
-                        autoFocus
                         required
                       />
                       <span className="change-password-form__eye-icon">
