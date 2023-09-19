@@ -16,6 +16,14 @@ function LoginPage() {
 
   const handleToggleShowPassword = () => {
     setShowPassword(!showPassword);
+    const inputElement = document.getElementById("login__form_password");
+    inputElement.focus();
+    const inputValue = inputElement.value;
+    inputElement.focus();
+    inputElement.value = "";
+    setTimeout(() => {
+      inputElement.value = inputValue;
+    }, 0);
   };
 
   const handleOutsideClick = (event) => {
