@@ -177,6 +177,8 @@ impl AuthState {
         Ok(())
     }
 
+    
+
     fn load_from_file(&mut self, file_path: &str) -> Result<bool, String> {
         let mut file = File::open(file_path).map_err(|e| {
             e.to_string() // Convert the error to a string using to_string
@@ -241,6 +243,7 @@ impl AuthState {
 
         Ok(())
     }
+
 
     fn get_encryption_key(&mut self) -> Vec<u8> {
         self.encryption_key.clone().unwrap_or_default()
@@ -387,7 +390,6 @@ async fn get_password(site: String, username: String) -> Result<GetPasswordRespo
         // Unwrap the query result only once and assign it to a variable
         let entry = query_result.unwrap();
         let encryption_key = get_key();
-        println!("368: {:?}", encryption_key);
         let enc_key: &[u8] = encryption_key.as_slice();
 
         let iv = [0x24; 16];
@@ -438,6 +440,71 @@ async fn delete_entry(site: String, username: String) -> Result<SuccessResponse,
             .bind(site)
             .bind(username)
             .execute(conn)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // Return the response as a struct
+        Ok(SuccessResponse {
+            success: true,
+            authorized: true,
+        })
+    } else {
+        // Return the response as a struct
+        Ok(SuccessResponse {
+            success: false,
+            authorized: false,
+        })
+    }
+}
+
+#[tauri::command]
+async fn edit_entry(new_site: String, new_username: String, new_password: String, edit_site: String, edit_username: String) -> Result<SuccessResponse, String> {
+    let authorized = authorize();
+
+    if authorized {
+        let filename = "./passvault.db";
+        let options = SqliteConnectOptions::new().filename(filename);
+
+        let mut conn: SqliteConnection = SqliteConnection::connect_with(&options)
+            .await
+            .map_err(|e| e.to_string())?;
+
+        // let conn: &mut SqliteConnection = &mut conn;
+
+        if new_password != "".to_string() {
+            let encryption_key = get_key();
+            let enc_key: &[u8] = encryption_key.as_slice();
+
+            let iv = [0x24; 16];
+            let mut buf = [0u8; 48];
+            let bytes: &[u8] = new_password.as_bytes();
+            let pt_len = bytes.len();
+
+            let salt: String = std::iter::repeat_with(fastrand::alphanumeric).take(16).collect();
+            let mut key = [0x42; 16];
+            Argon2::default().hash_password_into(enc_key, &salt.as_str().as_bytes(), &mut key).map_err(|e| e.to_string())?;
+            
+            let ciphertext = Aes128CbcEnc::new(&key.into(), &iv.into())
+                .encrypt_padded_b2b_mut::<Pkcs7>(&bytes, &mut buf)
+                .unwrap();
+
+            let enc_password = hex::encode(ciphertext);
+            sqlx::query("UPDATE PASSWORD_DATABASE SET 'password' = $1, 'salt' = $2 WHERE site = $3 AND username = $4")
+            .bind(enc_password)
+            .bind(salt)
+            .bind(edit_site.clone())
+            .bind(edit_username.clone())
+            .execute(&mut conn)
+            .await
+            .map_err(|e| e.to_string())?;
+        }
+
+        sqlx::query("UPDATE PASSWORD_DATABASE SET 'site' = $1, 'username' = $2 WHERE site = $3 AND username = $4")
+            .bind(new_site)
+            .bind(new_username)
+            .bind(edit_site)
+            .bind(edit_username)
+            .execute(&mut conn)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -590,7 +657,6 @@ async fn write_entry(site: String, username: String, password: String) -> Result
 
         let encryption_key = get_key();
         let enc_key: &[u8] = encryption_key.as_slice();
-        print!("Hello, {:?}", enc_key);
 
         let iv = [0x24; 16];
         let mut buf = [0u8; 48];
@@ -771,7 +837,7 @@ print!("Yes, {:?}", ct);
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, get_password, authenticate, authorize, start_app, lock_app])
+        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, edit_entry, get_password, authenticate, authorize, start_app, lock_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

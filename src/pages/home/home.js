@@ -20,6 +20,7 @@ function HomePage() {
   const [prevOpArgs, setPrevOpArgs] = useState([]);
 
   const [toDeleteIndex, setToDeleteIndex] = useState(-1);
+  const [toEditIndex, setToEditIndex] = useState(-1);
 
   const [showPassword, setShowPassword] = useState(
     new Array(siteObjects.length).fill(false)
@@ -75,9 +76,9 @@ function HomePage() {
     return password.join("");
   };
 
-  const handleClickGeneratePassword = (password) => {
-    console.log(document.getElementById("password-dialog__form"));
-    document.getElementById("password-dialog__form").password.value = password;
+  const handleClickGeneratePassword = (password, elementId) => {
+    console.log(document.getElementById(elementId));
+    document.getElementById(elementId).password.value = password;
     setShowGeneratePassword(false);
   };
 
@@ -250,6 +251,57 @@ function HomePage() {
     }
   };
 
+  const handleEditEntrySubmit = async (e) => {
+    const newSite = e.target.site.value;
+    const newUsername = e.target.username.value;
+    const newPassword = e.target.password.value;
+    const editSite = siteObjects[toEditIndex].site;
+    const editUsername = siteObjects[toEditIndex].username;
+    console.log("Hello");
+    if (!newSite || !newUsername) {
+      return;
+    }
+    console.log({
+      newSite: newSite,
+      newUsername: newUsername,
+      newPassword: newPassword,
+      editSite: editSite,
+      editUsername: editUsername,
+    });
+    console.log("Hello");
+    try {
+      let result = await invoke("edit_entry", {
+        newSite: newSite,
+        newUsername: newUsername,
+        newPassword: newPassword,
+        editSite: editSite,
+        editUsername: editUsername,
+      });
+      if (!result.authorized) {
+        runAuthFlow();
+        prevOp.current = handleEditEntrySubmit;
+        setPrevOpArgs([e]);
+        return;
+      }
+      console.log(result);
+      if (result.success) {
+        invoke("get_entries", {})
+          // `invoke` returns a Promise
+          .then((response) => {
+            console.log(result, response);
+            handleAllEntries(response.entries);
+          })
+          .catch((err) => console.log(err));
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    e.target.site.value = "";
+    e.target.username.value = "";
+    e.target.password.value = "";
+    setShowNewPassword(false);
+  };
+
   const handleCreateNewEntrySubmit = async (e) => {
     const site = e.target.site.value;
     const username = e.target.username.value;
@@ -291,6 +343,16 @@ function HomePage() {
   const triggerDeleteEntryFlow = (index) => {
     setToDeleteIndex(index);
     document.getElementById("confirm-delete-dialog").showModal();
+  };
+
+  const triggerEditEntryFlow = (index) => {
+    setToEditIndex(index);
+    const editDialogBox = document.getElementById("edit-dialog");
+    const editForm = document.getElementById("edit-dialog__form");
+    editForm.site.value = siteObjects[index].site;
+    editForm.username.value = siteObjects[index].username;
+    editForm.password.value = "";
+    editDialogBox.showModal();
   };
 
   const handleDeleteCancel = () => {
@@ -506,10 +568,15 @@ function HomePage() {
             name="password_suggest"
             style={{ display: showGeneratePassword ? "block" : "none" }}
             tabIndex={0}
-            onClick={() => handleClickGeneratePassword(safePassword)}
+            onClick={() =>
+              handleClickGeneratePassword(safePassword, "password-dialog__form")
+            }
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                handleClickGeneratePassword(safePassword);
+                handleClickGeneratePassword(
+                  safePassword,
+                  "password-dialog__form"
+                );
                 e.preventDefault();
                 document
                   .getElementById("password-dialog__form")
@@ -550,6 +617,119 @@ function HomePage() {
                   "password-dialog"
                 ).children[1].password.value = "";
                 document.getElementById("password-dialog").close();
+                setShowNewPassword(false);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </dialog>
+      <dialog id="edit-dialog" className="edit-dialog">
+        <p>Edit your entry:</p>
+        <form
+          method="dialog"
+          id="edit-dialog__form"
+          className="edit-dialog__form"
+          onSubmit={handleEditEntrySubmit}
+        >
+          <input
+            className="edit-dialog__input"
+            id="edit-dialog__site-input"
+            type="text"
+            key={1}
+            name="site"
+            placeholder="Site"
+            required
+          />
+          <input
+            className="edit-dialog__input"
+            type="text"
+            key={2}
+            name="username"
+            placeholder="Username"
+            autoComplete="username"
+            required
+          />
+          <div className="edit-dialog__input-container">
+            <input
+              id="edit-dialog__password-input"
+              className="edit-dialog__input"
+              type={showNewPassword ? "text" : "password"}
+              key={3}
+              name="password"
+              placeholder="Password"
+              autoComplete="new-password"
+              onChange={handlePasswordChange}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  if (!showGeneratePassword) {
+                    setSafePassword(generateRandomPassword());
+                    setShowGeneratePassword(true);
+                  }
+                  console.log(
+                    document.getElementById("edit-dialog__form")
+                      .password_suggest
+                  );
+                  generateRandomPasswordRef.current.focus();
+                }
+              }}
+              autoFocus
+            />
+            <span
+              className="toggle-password"
+              onClick={handleToggleShowNewPassword}
+            >
+              <i className="material-icons">
+                {showNewPassword ? "visibility_off" : "visibility"}
+              </i>
+            </span>
+          </div>
+          <div
+            ref={generateRandomPasswordRef}
+            className="edit-dialog__suggest-password"
+            name="password_suggest"
+            style={{ display: showGeneratePassword ? "block" : "none" }}
+            tabIndex={0}
+            onClick={() =>
+              handleClickGeneratePassword(safePassword, "edit-dialog__form")
+            }
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleClickGeneratePassword(safePassword, "edit-dialog__form");
+                e.preventDefault();
+                document.getElementById("edit-dialog__form").password.focus();
+              }
+              if (e.key === "ArrowDown") {
+                document.getElementById("edit-dialog__form").password.focus();
+              }
+              if (e.key === "ArrowUp") {
+                document.getElementById("edit-dialog__form").password.focus();
+              }
+            }}
+          >
+            Use Secure Password:{` ${safePassword}`}
+          </div>
+          <div className="edit-dialog__form-button-container">
+            <button className="edit-dialog__form-button" type="submit">
+              Save
+            </button>
+            <button
+              className="edit-dialog__form-button"
+              type="button"
+              onClick={() => {
+                console.log(
+                  document.getElementById("edit-dialog").children[1].site
+                );
+                document.getElementById("edit-dialog").children[1].site.value =
+                  "";
+                document.getElementById(
+                  "edit-dialog"
+                ).children[1].username.value = "";
+                document.getElementById(
+                  "edit-dialog"
+                ).children[1].password.value = "";
+                document.getElementById("edit-dialog").close();
                 setShowNewPassword(false);
               }}
             >
@@ -786,6 +966,15 @@ function HomePage() {
                           }}
                         >
                           delete
+                        </i>
+                        <i
+                          className="material-icons"
+                          onClick={() => triggerEditEntryFlow(index)}
+                          style={{
+                            cursor: "pointer",
+                          }}
+                        >
+                          edit
                         </i>
                       </div>
                     </td>
