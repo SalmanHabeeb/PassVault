@@ -103,6 +103,7 @@ struct AuthState {
     encryption_key: Option<Vec<u8>>,
     encryption_key_enc: Option<[u8; 32]>,
     time_of_entry: DateTime<Utc>,
+    unlock_time: i64,
     salt: Option<String>,
     auth: bool,
 }
@@ -122,6 +123,7 @@ impl AuthState {
             encryption_key:None,
             encryption_key_enc:None,
             time_of_entry,
+            unlock_time: 60,
             salt,
             auth,
         }
@@ -133,7 +135,6 @@ impl AuthState {
         })?;
 
         // Write master_password_hash to the file
-        println!("136: {:?}", self.master_password_hash);
         if let Some(ref hash) = self.master_password_hash {
             writeln!(file, "master_password_hash: {}", hash).map_err(|e| {
                     e.to_string() // Convert the error to a string using to_string
@@ -155,6 +156,11 @@ impl AuthState {
                 }
             )?;
         }
+
+        writeln!(file, "unlock_time: {}", self.unlock_time).map_err(|e| {
+                e.to_string() // Convert the error to a string using to_string
+            }
+        )?;
 
         Ok(())
     }
@@ -221,6 +227,12 @@ impl AuthState {
             } else if line.starts_with("salt: ") {
                 self.salt = Some(line.trim_start_matches("salt: ").to_string());
                 counter+=1;
+            } else if line.starts_with("unlock_time: ") {
+                // Not necessary to add counter, since not a required field
+                self.unlock_time = match line.trim_start_matches("unlock_time: ").parse::<i64>() {
+                    Ok(parsed_num) => parsed_num,
+                    Err(_) => 60,
+                };
             }
             // Add more parsing logic for other fields as needed
         }
@@ -257,6 +269,10 @@ impl AuthState {
         Ok(())
     }
 
+    fn set_unlock_time(&mut self, unlock_time: i64) {
+        self.unlock_time = unlock_time;
+    }
+
 
     fn get_encryption_key(&mut self) -> Vec<u8> {
         self.encryption_key.clone().unwrap_or_default()
@@ -268,12 +284,16 @@ impl AuthState {
         }
         let current_time = Utc::now();
         let time_difference = current_time.signed_duration_since(self.time_of_entry);
-        let duration = 60-time_difference.num_seconds();
+        let duration = self.unlock_time-time_difference.num_seconds();
         if duration <= 0 {
             self.set_auth(false);
             return 0;
         } 
         return duration;
+    }
+
+    fn get_unlock_time(&mut self) -> i64 {
+        return self.unlock_time;
     }
 
     fn get_master_password_hash(&mut self)  -> Option<String> {
@@ -295,7 +315,7 @@ impl AuthState {
             let time_difference = current_time.signed_duration_since(self.time_of_entry);
             let duration = time_difference.num_seconds();
 
-            if duration > 60 {
+            if duration > self.unlock_time {
                 self.auth = false;
                 return false;
             } else {
@@ -563,10 +583,36 @@ fn authorize() -> bool {
     return auth_state_ref.is_authorized();
 }
 
+#[derive(Serialize)]
+struct TimeResponse {
+    time_left: i64,
+    unlock_time: i64,
+}
+
 #[tauri::command]
-fn check_time() -> i64 {
+fn check_time() -> TimeResponse {
     let mut auth_state_ref = AUTH_STATE.lock().unwrap();
-    return auth_state_ref.get_time_left();
+    return TimeResponse {
+        time_left: auth_state_ref.get_time_left(),
+        unlock_time: auth_state_ref.get_unlock_time(),
+    };
+}
+
+#[tauri::command]
+fn change_unlock_time(new_time: i64) -> SuccessResponse {
+    let authorized = authorize();
+    let mut response = SuccessResponse {
+        success: true,
+        authorized: authorized,
+    };
+    if authorized {
+        let mut auth_state_ref = AUTH_STATE.lock().unwrap();
+        auth_state_ref.set_unlock_time(new_time);
+        auth_state_ref.save_to_file("./passvault.bin");
+    } else {
+        response.success = false;
+    }
+    return response;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -889,7 +935,7 @@ print!("Yes, {:?}", ct);
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, edit_entry, get_password, authenticate, authorize, check_time, change_password, start_app, lock_app])
+        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, edit_entry, get_password, authenticate, authorize, check_time, change_unlock_time,change_password, start_app, lock_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

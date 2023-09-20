@@ -16,6 +16,7 @@ function HomePage() {
   const [safePassword, setSafePassword] = useState("");
   const generateRandomPasswordRef = useRef(null);
   const generateRandomEditPasswordRef = useRef(null);
+  const currentPercentage = useRef(0);
 
   const prevOp = useRef(null);
   const [prevOpArgs, setPrevOpArgs] = useState([]);
@@ -31,6 +32,7 @@ function HomePage() {
   const [showAuthPassword, setShowAuthPassword] = useState(false);
 
   const [time, setTime] = useState(0);
+  const totalTime = useRef(0);
 
   const [clickedCopy, setClickedCopy] = useState(
     new Array(siteObjects.length).fill(false)
@@ -160,7 +162,10 @@ function HomePage() {
     document.getElementById("auth-dialog__form").password.value = "";
     setShowAuthPassword(false);
     document.getElementById("auth-dialog").close();
-    if (prevOp.current.toString() !== getAllData.toString()) {
+    if (
+      typeof prevOp.current === "function" &&
+      prevOp.current.toString() !== getAllData.toString()
+    ) {
       console.log("164: ", prevOp.current);
       console.log("165: ", getAllData);
       console.log("166: ", getAllData === prevOp.current);
@@ -513,6 +518,15 @@ function HomePage() {
       if (button) {
         button.click();
       }
+    } else if (
+      event.ctrlKey &&
+      ((event.key === "s" && !event.getModifierState("CapsLock")) ||
+        (event.key === "S" && event.getModifierState("CapsLock")))
+    ) {
+      const button = document.getElementById("table-header-button-settings");
+      if (button) {
+        button.click();
+      }
     }
   };
 
@@ -526,12 +540,50 @@ function HomePage() {
   const checkTime = async () => {
     try {
       let response = await invoke("check_time", {});
-      setTime(response);
-      console.log(response);
+      setTime(response.time_left);
+      const buttonElement = document.getElementById(
+        "table-header-button-lock-passwords"
+      );
+      const progressPercentage =
+        response.time_left <= totalTime.current
+          ? ((totalTime.current - response.time_left) * 100) / totalTime.current
+          : 0;
+      if (progressPercentage === 0) {
+        currentPercentage.current = 0;
+      }
+      console.log(progressPercentage, response.time_left);
+      const duration = 1000;
+      const increments = 10;
+      const incrementPercentage =
+        (progressPercentage - currentPercentage.current) / increments;
+
+      const updateBackground = () => {
+        if (currentPercentage.current >= progressPercentage) {
+          clearInterval(animationInterval);
+        } else {
+          currentPercentage.current += incrementPercentage;
+          buttonElement.style.background = `radial-gradient(closest-side, #00ff00 85%, transparent 80% 100%), conic-gradient(blue ${currentPercentage.current}%, orange 0)`;
+        }
+      };
+      const animationInterval = setInterval(
+        updateBackground,
+        duration / increments
+      );
     } catch (error) {
       console.error(error);
     }
   };
+
+  useEffect(() => {
+    invoke("check_time", {})
+      .then((response) => {
+        totalTime.current = response.unlock_time;
+        console.log(response);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }, []);
 
   useEffect(() => {
     let interval = setInterval(() => {
@@ -894,7 +946,7 @@ function HomePage() {
             <div className="table-header-button-container">
               <button
                 id="table-header-button-lock-passwords"
-                className="table-header-button"
+                className="table-header-button-lock-passwords"
                 onClick={time === 0 ? runAuthFlow : handleLockPasswords}
                 onMouseOver={() => {
                   showHelp("help-lock");
@@ -904,9 +956,19 @@ function HomePage() {
                 }}
               >
                 <i className="material-icons">
-                  {time === 0 ? "lock_open" : "lock"}
+                  {time === 0 ? "lock_open" : "lock_clock"}
                 </i>
               </button>
+              {/* <div className="progress-wrapper">
+                <div
+                  className="progress-bar"
+                  style={{
+                    strokeDasharray: `${50 * Math.PI} ${50 * Math.PI}`,
+                    strokeDashoffset:
+                      50 * Math.PI - ((time - 60) / 60) * (50 * Math.PI),
+                  }}
+                ></div>
+              </div> */}
               <div id="help-lock" className="help">
                 {time === 0 ? "Unlock Passwords" : "Lock the passwords"}
                 <div className="arrow"></div>
@@ -933,6 +995,7 @@ function HomePage() {
             </div>
             <div className="table-header-button-container">
               <button
+                id="table-header-button-settings"
                 className="table-header-button"
                 onClick={handleClickSettings}
                 onMouseOver={() => {

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import "./settings.css";
 import { useDispatch } from "react-redux";
 
@@ -10,6 +10,9 @@ function SettingsPage() {
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
+
+  const [seconds, setSeconds] = useState(0);
+  const [minutes, setMinutes] = useState(0);
 
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const prevOp = useRef(null);
@@ -48,6 +51,114 @@ function SettingsPage() {
 
   const handleExpandChangePassword = () => {
     setShowChangePassword(!showChangePassword);
+  };
+
+  const calculateTotalTime = (minutes, seconds) => {
+    return minutes * 60 + seconds;
+  };
+
+  const handleSecondsIncrement = async (value) => {
+    if (seconds + value > 59) {
+      setSeconds(59);
+      await handleSetTime(minutes, 59);
+
+      return;
+    }
+    if (seconds + value < 0) {
+      setSeconds(0);
+      await handleSetTime(minutes, 0);
+      return;
+    }
+    if (calculateTotalTime(minutes, seconds + value) < 15) {
+      setMinutes(0);
+      setSeconds(15);
+      await handleSetTime(0, 15);
+
+      return;
+    }
+    setSeconds(seconds + value);
+    await handleSetTime(minutes, seconds + value);
+  };
+
+  const handleMinutesIncrement = async (value) => {
+    if (minutes + value > 59) {
+      setMinutes(59);
+      await handleSetTime(59, seconds);
+
+      return;
+    }
+    if (minutes + value < 0) {
+      setMinutes(0);
+      await handleSetTime(0, 15);
+      return;
+    }
+    if (calculateTotalTime(minutes + value, seconds) < 15) {
+      setMinutes(0);
+      setSeconds(15);
+      await handleSetTime(0, 15);
+      return;
+    }
+    setMinutes(minutes + value);
+    await handleSetTime(minutes + value, seconds);
+  };
+
+  const handleMinutesChange = async (event) => {
+    if (parseInt(event.target.value) > 59) {
+      setMinutes(59);
+      await handleSetTime(59, seconds);
+      return;
+    }
+    if (parseInt(event.target.value) < 0) {
+      setMinutes(0);
+      await handleSetTime(0, 15);
+      return;
+    }
+    if (calculateTotalTime(parseInt(event.target.value), seconds) < 15) {
+      setMinutes(0);
+      setSeconds(15);
+      await handleSetTime(0, 15);
+      return;
+    }
+    setMinutes(parseInt(event.target.value));
+    await handleSetTime(parseInt(event.target.value), seconds);
+  };
+
+  const handleSecondsChange = async (event) => {
+    if (event.target.value > 59) {
+      setSeconds(59);
+      await handleSetTime(minutes, 59);
+      return;
+    }
+    if (event.target.value < 0) {
+      setSeconds(0);
+      await handleSetTime(minutes, 0);
+      return;
+    }
+    if (calculateTotalTime(minutes, parseInt(event.target.value)) < 15) {
+      setMinutes(0);
+      setSeconds(15);
+      await handleSetTime(0, 15);
+      return;
+    }
+    setSeconds(parseInt(event.target.value));
+    await handleSetTime(minutes, parseInt(event.target.value));
+  };
+
+  const handleSetTime = async (minutes, seconds) => {
+    try {
+      let response = await invoke("change_unlock_time", {
+        newTime: calculateTotalTime(minutes, seconds),
+      });
+      console.log(response);
+      if (!response.authorized) {
+        runAuthFlow();
+        prevOp.current = handleSetTime;
+        setPrevOpArgs([minutes, seconds]);
+        return;
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleChangePassword = async (event) => {
@@ -141,6 +252,17 @@ function SettingsPage() {
     document.getElementById("auth-dialog").close();
   };
 
+  useEffect(() => {
+    invoke("check_time", {})
+      .then((response) => {
+        setSeconds(response.unlock_time % 60);
+        setMinutes(Math.floor(response.unlock_time / 60));
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  }, []);
+
   return (
     <div id="Settings">
       <dialog id="invalid-password-dialog" className="invalid-password-dialog">
@@ -200,18 +322,18 @@ function SettingsPage() {
         </span>
         <div className="settings__menu">
           <div className="settings__section">
+            <div className="settings__section-row">
+              <p className="settings__section-heading">Change Password</p>
+              <span
+                className="settings__section-down-arrow"
+                onClick={handleExpandChangePassword}
+              >
+                <i className="material-icons">
+                  {showChangePassword ? "expand_less" : "expand_more"}
+                </i>
+              </span>
+            </div>
             <div className="change-password-container">
-              <div className="settings__section-row">
-                <p className="settings__section-heading">Change Password</p>
-                <span
-                  className="settings__section-down-arrow"
-                  onClick={handleExpandChangePassword}
-                >
-                  <i className="material-icons">
-                    {showChangePassword ? "expand_less" : "expand_more"}
-                  </i>
-                </span>
-              </div>
               {showChangePassword ? (
                 <div className="settings__section-expansion">
                   <form
@@ -288,6 +410,86 @@ function SettingsPage() {
                   </form>
                 </div>
               ) : null}
+            </div>
+          </div>
+          <div className="settings__section">
+            <div className="settings__section-row">
+              <div className="settings__section-heading">Lock in Time</div>
+              <div className="settings__section-time-input-container">
+                <div className="settings__section-time-nested-container">
+                  <label
+                    className="settings__section-time-input-label"
+                    for="minutesInput"
+                  >
+                    M
+                  </label>
+                  <label
+                    className="settings__section-time-input-label"
+                    for="secondsInput"
+                  >
+                    S
+                  </label>
+                </div>
+                <div className="settings__section-time-nested-container">
+                  <div className="settings__section-time-input-set">
+                    <input
+                      type="number"
+                      id="minutesInput"
+                      className="settings__section-time-input"
+                      name="minutes"
+                      min="0"
+                      value={minutes}
+                      onChange={handleMinutesChange}
+                      required
+                    />
+                    <button
+                      className="settings__section-time-input-set-buttons"
+                      onClick={() => {
+                        handleMinutesIncrement(-1);
+                      }}
+                    >
+                      ▼
+                    </button>
+                    <button
+                      className="settings__section-time-input-set-buttons"
+                      onClick={() => {
+                        handleMinutesIncrement(1);
+                      }}
+                    >
+                      ▲
+                    </button>
+                  </div>
+                  <div className="settings__section-time-input-set">
+                    <input
+                      type="number"
+                      id="secondsInput"
+                      className="settings__section-time-input"
+                      name="seconds"
+                      min="0"
+                      max="59"
+                      value={seconds}
+                      onChange={handleSecondsChange}
+                      required
+                    />
+                    <button
+                      className="settings__section-time-input-set-buttons"
+                      onClick={() => {
+                        handleSecondsIncrement(-1);
+                      }}
+                    >
+                      ▼
+                    </button>
+                    <button
+                      className="settings__section-time-input-set-buttons"
+                      onClick={() => {
+                        handleSecondsIncrement(1);
+                      }}
+                    >
+                      ▲
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>

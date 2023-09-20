@@ -36,6 +36,7 @@
 .settings__menu {
   width: 80%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: baseline;
   background-color: #060606;
@@ -58,6 +59,7 @@
   font-weight: bolder;
   font-size: 1.3rem;
   user-select: none;
+  margin: 10px;
 }
 
 .settings__section-down-arrow {
@@ -67,6 +69,7 @@
   font-size: 2rem;
   user-select: none;
   cursor: pointer;
+  margin: 10px;
 }
 
 .settings__section-expansion {
@@ -77,7 +80,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: start;
+  justify-content: flex-start;
   margin: 0px 10px;
 }
 
@@ -130,4 +133,111 @@
 
 .change-password-form__button:hover {
   background-color: #ff8000; /* Darker orange on hover */
+}
+
+.settings__section-time-input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.settings__section-time-nested-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.settings__section-time-input-label {
+  display: block;
+  margin: 0px 30px;
+}
+
+.settings__section-time-input {
+  width: 20px;
+  height: 10px;
+  padding: 20px 20px 20px 5px;
+  border: none;
+  border-radius: 5px;
+  background-color: #333;
+  color: #fff;
+  font-size: 16px;
+}
+
+.settings__section-time-input::-webkit-inner-spin-button,
+.settings__section-time-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.settings__section-time-input::-webkit-input-placeholder {
+  color: #aaa;
+}
+
+.settings__section-time-input:-moz-placeholder {
+  color: #aaa;
+}
+
+.settings__section-time-input::-moz-placeholder {
+  color: #aaa;
+}
+
+.settings__section-time-input:-ms-input-placeholder {
+  color: #aaa;
+}
+
+.settings__section-time-input:focus {
+  outline: none;
+}
+
+.settings__section-time-input-set {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  margin: 10px;
+}
+
+.settings__section-time-input-set-buttons {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  height: 25px;
+  border-style: groove;
+  background-color: black;
+  border-radius: 5px;
+  border-style: none;
+  box-sizing: border-box;
+  color: white;
+  cursor: pointer;
+  display: inline-block;
+  font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 20px;
+  list-style: none;
+  outline: none;
+  text-align: center;
+  text-decoration: none;
+  transition: color 100ms;
+  vertical-align: baseline;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: 0.3s ease-in-out;
+}
+
+.settings__section-time-input-set-buttons:hover {
+  background-color: #00ff00;
+}
+
+.settings__section-time-input-set-buttons:active {
+  background-color: #060606;
+}
+
+.settings__section-time-input-set-buttons:nth-child(2) {
+  position: absolute;
+  top: 25px;
+  right: 0px;
 }
