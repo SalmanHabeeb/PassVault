@@ -262,6 +262,20 @@ impl AuthState {
         self.encryption_key.clone().unwrap_or_default()
     }
 
+    fn get_time_left(&mut self) -> i64 {
+        if !self.auth {
+            return 0;
+        }
+        let current_time = Utc::now();
+        let time_difference = current_time.signed_duration_since(self.time_of_entry);
+        let duration = 60-time_difference.num_seconds();
+        if duration <= 0 {
+            self.set_auth(false);
+            return 0;
+        } 
+        return duration;
+    }
+
     fn get_master_password_hash(&mut self)  -> Option<String> {
         return self.master_password_hash.clone();
     }
@@ -546,8 +560,13 @@ fn file_exists(file_path: &str) -> bool {
 #[tauri::command]
 fn authorize() -> bool {
     let mut auth_state_ref = AUTH_STATE.lock().unwrap();
-    let filepath: &str = "./passvault.bin";
     return auth_state_ref.is_authorized();
+}
+
+#[tauri::command]
+fn check_time() -> i64 {
+    let mut auth_state_ref = AUTH_STATE.lock().unwrap();
+    return auth_state_ref.get_time_left();
 }
 
 #[derive(Serialize, Deserialize)]
@@ -870,7 +889,7 @@ print!("Yes, {:?}", ct);
 
 fn main() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, edit_entry, get_password, authenticate, authorize, change_password, start_app, lock_app])
+        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, edit_entry, get_password, authenticate, authorize, check_time, change_password, start_app, lock_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

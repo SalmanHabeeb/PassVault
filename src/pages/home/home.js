@@ -15,6 +15,7 @@ function HomePage() {
   const [showGeneratePassword, setShowGeneratePassword] = useState(false);
   const [safePassword, setSafePassword] = useState("");
   const generateRandomPasswordRef = useRef(null);
+  const generateRandomEditPasswordRef = useRef(null);
 
   const prevOp = useRef(null);
   const [prevOpArgs, setPrevOpArgs] = useState([]);
@@ -28,6 +29,8 @@ function HomePage() {
 
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showAuthPassword, setShowAuthPassword] = useState(false);
+
+  const [time, setTime] = useState(0);
 
   const [clickedCopy, setClickedCopy] = useState(
     new Array(siteObjects.length).fill(false)
@@ -53,7 +56,12 @@ function HomePage() {
       generateRandomPasswordRef.current &&
       !generateRandomPasswordRef.current.contains(event.target)
     ) {
-      // setShowGeneratePassword(false);
+      setShowGeneratePassword(false);
+    } else if (
+      generateRandomEditPasswordRef.current &&
+      !generateRandomEditPasswordRef.current.contains(event.target)
+    ) {
+      setShowGeneratePassword(false);
     }
   };
 
@@ -140,6 +148,8 @@ function HomePage() {
     e.target.password.value = "";
     console.log(prevOp);
     await executeFunc(prevOp.current, prevOpArgs);
+    prevOp.current = null;
+    setPrevOpArgs([]);
   };
 
   const runAuthFlow = () => {
@@ -150,6 +160,13 @@ function HomePage() {
     document.getElementById("auth-dialog__form").password.value = "";
     setShowAuthPassword(false);
     document.getElementById("auth-dialog").close();
+    if (prevOp.current.toString() !== getAllData.toString()) {
+      console.log("164: ", prevOp.current);
+      console.log("165: ", getAllData);
+      console.log("166: ", getAllData === prevOp.current);
+      prevOp.current = null;
+      setPrevOpArgs([]);
+    }
   };
 
   const handleToggleShowPassword = async (index) => {
@@ -251,8 +268,6 @@ function HomePage() {
       prevOp.current = null;
       setPrevOpArgs([]);
       return await func(...args);
-    } else {
-      throw new Error("The first argument must be a function");
     }
   };
 
@@ -437,13 +452,6 @@ function HomePage() {
   };
 
   useEffect(() => {
-    // invoke("greet", { name: "world" })
-    //   .then((response) => {
-    //     console.log(response);
-    //   })
-    //   .catch((error) => {
-    //     console.error(error);
-    //   });
     getAllData();
     return () => {
       if (timeoutId) {
@@ -461,11 +469,22 @@ function HomePage() {
 
   useEffect(() => {
     const dialog = document.getElementById("password-dialog");
+    const editDialog = document.getElementById("edit-dialog");
     dialog.addEventListener("click", (event) => {
       // check if the user clicked outside of the dialog
       if (
         document.body.contains(dialog) &&
         !generateRandomPasswordRef.current.contains(event.target)
+      ) {
+        // set showGeneratePassword to false
+        setShowGeneratePassword(false);
+      }
+    });
+    editDialog.addEventListener("click", (event) => {
+      // check if the user clicked outside of the dialog
+      if (
+        document.body.contains(dialog) &&
+        !generateRandomEditPasswordRef.current.contains(event.target)
       ) {
         // set showGeneratePassword to false
         setShowGeneratePassword(false);
@@ -501,6 +520,25 @@ function HomePage() {
     document.addEventListener("keydown", handleWindowKeyDown);
     return () => {
       document.removeEventListener("keydown", handleWindowKeyDown);
+    };
+  }, []);
+
+  const checkTime = async () => {
+    try {
+      let response = await invoke("check_time", {});
+      setTime(response);
+      console.log(response);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  useEffect(() => {
+    let interval = setInterval(() => {
+      checkTime();
+    }, 200);
+    return () => {
+      clearInterval(interval);
     };
   }, []);
 
@@ -676,7 +714,7 @@ function HomePage() {
                     document.getElementById("edit-dialog__form")
                       .password_suggest
                   );
-                  generateRandomPasswordRef.current.focus();
+                  generateRandomEditPasswordRef.current.focus();
                 }
               }}
               autoFocus
@@ -691,7 +729,7 @@ function HomePage() {
             </span>
           </div>
           <div
-            ref={generateRandomPasswordRef}
+            ref={generateRandomEditPasswordRef}
             className="edit-dialog__suggest-password"
             name="password_suggest"
             style={{ display: showGeneratePassword ? "block" : "none" }}
@@ -857,7 +895,7 @@ function HomePage() {
               <button
                 id="table-header-button-lock-passwords"
                 className="table-header-button"
-                onClick={handleLockPasswords}
+                onClick={time === 0 ? runAuthFlow : handleLockPasswords}
                 onMouseOver={() => {
                   showHelp("help-lock");
                 }}
@@ -865,10 +903,12 @@ function HomePage() {
                   hideHelp("help-lock");
                 }}
               >
-                <i className="material-icons">lock</i>
+                <i className="material-icons">
+                  {time === 0 ? "lock_open" : "lock"}
+                </i>
               </button>
               <div id="help-lock" className="help">
-                Lock the passwords
+                {time === 0 ? "Unlock Passwords" : "Lock the passwords"}
                 <div className="arrow"></div>
               </div>
             </div>
