@@ -59,88 +59,68 @@ function SettingsPage() {
 
   const handleSecondsIncrement = async (value) => {
     if (seconds + value > 59) {
-      setSeconds(59);
       await handleSetTime(minutes, 59);
 
       return;
     }
     if (seconds + value < 0) {
-      setSeconds(0);
       await handleSetTime(minutes, 0);
       return;
     }
     if (calculateTotalTime(minutes, seconds + value) < 15) {
-      setMinutes(0);
-      setSeconds(15);
       await handleSetTime(0, 15);
 
       return;
     }
-    setSeconds(seconds + value);
     await handleSetTime(minutes, seconds + value);
   };
 
   const handleMinutesIncrement = async (value) => {
     if (minutes + value > 59) {
-      setMinutes(59);
-      await handleSetTime(59, seconds);
+      await handleSetTime(59, 59);
 
       return;
     }
     if (minutes + value < 0) {
-      setMinutes(0);
       await handleSetTime(0, 15);
       return;
     }
     if (calculateTotalTime(minutes + value, seconds) < 15) {
-      setMinutes(0);
-      setSeconds(15);
       await handleSetTime(0, 15);
       return;
     }
-    setMinutes(minutes + value);
     await handleSetTime(minutes + value, seconds);
   };
 
   const handleMinutesChange = async (event) => {
     if (parseInt(event.target.value) > 59) {
-      setMinutes(59);
       await handleSetTime(59, seconds);
       return;
     }
     if (parseInt(event.target.value) < 0) {
-      setMinutes(0);
       await handleSetTime(0, 15);
       return;
     }
     if (calculateTotalTime(parseInt(event.target.value), seconds) < 15) {
-      setMinutes(0);
-      setSeconds(15);
       await handleSetTime(0, 15);
       return;
     }
-    setMinutes(parseInt(event.target.value));
     await handleSetTime(parseInt(event.target.value), seconds);
   };
 
   const handleSecondsChange = async (event) => {
     if (event.target.value > 59) {
-      setSeconds(59);
       await handleSetTime(minutes, 59);
       return;
     }
     if (event.target.value < 0) {
-      setSeconds(0);
       await handleSetTime(minutes, 0);
       return;
     }
     if (calculateTotalTime(minutes, parseInt(event.target.value)) < 15) {
-      setMinutes(0);
-      setSeconds(15);
       await handleSetTime(0, 15);
       return;
     }
-    setSeconds(parseInt(event.target.value));
     await handleSetTime(minutes, parseInt(event.target.value));
   };
 
@@ -155,6 +135,10 @@ function SettingsPage() {
         prevOp.current = handleSetTime;
         setPrevOpArgs([minutes, seconds]);
         return;
+      } else if (response.success) {
+        console.log("hello");
+        setMinutes(minutes);
+        setSeconds(seconds);
       }
     } catch (error) {
       console.error(error);

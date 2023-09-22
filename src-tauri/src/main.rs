@@ -355,6 +355,25 @@ lazy_static! {
     static ref AUTH_STATE: std::sync::Mutex<AuthState> = std::sync::Mutex::new(AuthState::new());
 }
 
+fn pathbuf_to_string(path_buf: std::path::PathBuf) -> String {
+    path_buf.into_os_string().into_string().unwrap()
+}
+
+fn get_config_dir_path(app_handle: tauri::AppHandle) -> String {
+    let config_path = app_handle.path_resolver().app_config_dir().unwrap();
+    return pathbuf_to_string(config_path);
+}
+
+fn get_config_path(app_handle: tauri::AppHandle) -> String {
+    let config_path = app_handle.path_resolver().app_config_dir().unwrap();
+    return pathbuf_to_string(config_path.join("passvault.bin"));
+}
+
+fn get_data_path(app_handle: tauri::AppHandle) -> String {
+    let data_path = app_handle.path_resolver().app_data_dir().unwrap();
+    return pathbuf_to_string(data_path.join("passvault.db"));
+}
+
 #[derive(Serialize)]
 struct GetEntriesResponse {
     success: bool,
@@ -363,7 +382,7 @@ struct GetEntriesResponse {
 }
 
 #[tauri::command]
-async fn get_entries() -> Result<GetEntriesResponse, String> {
+async fn get_entries(app_handle: tauri::AppHandle) -> Result<GetEntriesResponse, String> {
     let authorized = authorize();
     let mut response = GetEntriesResponse {
         success: false,
@@ -372,7 +391,8 @@ async fn get_entries() -> Result<GetEntriesResponse, String> {
     };
 
     if authorized {
-        let filename = "./passvault.db";
+        let filename_string = get_data_path(app_handle);
+        let filename = filename_string.as_str();
         let options = SqliteConnectOptions::new().filename(filename);
 
         let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
@@ -408,7 +428,7 @@ struct GetPasswordResponse {
 }
 
 #[tauri::command]
-async fn get_password(site: String, username: String) -> Result<GetPasswordResponse, String> {
+async fn get_password(app_handle: tauri::AppHandle, site: String, username: String) -> Result<GetPasswordResponse, String> {
     let authorized = authorize();
     let mut response = GetPasswordResponse {
         success: false,
@@ -417,7 +437,8 @@ async fn get_password(site: String, username: String) -> Result<GetPasswordRespo
     };
 
     if authorized {
-        let filename = "./passvault.db";
+        let filename_string = get_data_path(app_handle);
+        let filename = filename_string.as_str();
         let options = SqliteConnectOptions::new().filename(filename);
 
         let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
@@ -469,11 +490,12 @@ async fn get_password(site: String, username: String) -> Result<GetPasswordRespo
 
 
 #[tauri::command]
-async fn delete_entry(site: String, username: String) -> Result<SuccessResponse, String> {
+async fn delete_entry(app_handle: tauri::AppHandle, site: String, username: String) -> Result<SuccessResponse, String> {
     let authorized = authorize();
 
     if authorized {
-        let filename = "./passvault.db";
+        let filename_string = get_data_path(app_handle);
+        let filename = filename_string.as_str();
         let options = SqliteConnectOptions::new().filename(filename);
 
         let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
@@ -504,11 +526,12 @@ async fn delete_entry(site: String, username: String) -> Result<SuccessResponse,
 }
 
 #[tauri::command]
-async fn edit_entry(new_site: String, new_username: String, new_password: String, edit_site: String, edit_username: String) -> Result<SuccessResponse, String> {
+async fn edit_entry(app_handle: tauri::AppHandle, new_site: String, new_username: String, new_password: String, edit_site: String, edit_username: String) -> Result<SuccessResponse, String> {
     let authorized = authorize();
 
     if authorized {
-        let filename = "./passvault.db";
+        let filename_string = get_data_path(app_handle);
+        let filename = filename_string.as_str();
         let options = SqliteConnectOptions::new().filename(filename);
 
         let mut conn: SqliteConnection = SqliteConnection::connect_with(&options)
@@ -599,8 +622,10 @@ fn check_time() -> TimeResponse {
 }
 
 #[tauri::command]
-fn change_unlock_time(new_time: i64) -> SuccessResponse {
+fn change_unlock_time(app_handle: tauri::AppHandle, new_time: i64) -> SuccessResponse {
     let authorized = authorize();
+    let config_path_string = get_config_path(app_handle);
+    let config_path: &str = config_path_string.as_str();
     let mut response = SuccessResponse {
         success: true,
         authorized: authorized,
@@ -608,7 +633,7 @@ fn change_unlock_time(new_time: i64) -> SuccessResponse {
     if authorized {
         let mut auth_state_ref = AUTH_STATE.lock().unwrap();
         auth_state_ref.set_unlock_time(new_time);
-        auth_state_ref.save_to_file("./passvault.bin");
+        auth_state_ref.save_to_file(config_path);
     } else {
         response.success = false;
     }
@@ -633,13 +658,16 @@ struct StartAppResponse {
 }
 
 #[tauri::command]
-async fn start_app() -> Result<StartAppResponse, String> {
-    let filepath: &str = "./passvault.bin";
-    let database_path: &str = "./passvault.db";
+async fn start_app(app_handle: tauri::AppHandle) -> Result<StartAppResponse, String> {
+    let config_path_string = get_config_path(app_handle.clone());
+    let config_path: &str = config_path_string.as_str();
+    let database_path_string = get_data_path(app_handle.clone());
+    let database_path: &str = database_path_string.as_str();
     let mut config_good = true;
     let mut is_new_user = false;
-    if file_exists(filepath) {
-        config_good = load_auth(filepath);
+    // println!("{}, {}", config_path, database_path);
+    if file_exists(config_path) {
+        config_good = load_auth(config_path);
     } else {
         is_new_user = true;
     }
@@ -668,19 +696,21 @@ async fn start_app() -> Result<StartAppResponse, String> {
 }
 
 #[tauri::command]
-fn change_password(current_password: String, new_password: String) -> Result<SuccessResponse, String> {
+fn change_password(app_handle: tauri::AppHandle, current_password: String, new_password: String) -> Result<SuccessResponse, String> {
     let mut response = SuccessResponse{
         success: true,
         authorized: true,
     };
     let mut auth_state_ref = AUTH_STATE.lock().unwrap();
+    let config_path_string = get_config_path(app_handle);
+    let config_path: &str = config_path_string.as_str();
 
     if verify(current_password.clone(), auth_state_ref.get_master_password_hash().unwrap().as_str()).unwrap() {
         let hashed_new_password = hash(new_password.clone(), DEFAULT_COST).unwrap();
         let result = auth_state_ref.set_encryption_key(current_password.clone());
         auth_state_ref.set_new_password(current_password, new_password);
         auth_state_ref.set_password_hash(hashed_new_password);
-        auth_state_ref.save_to_file("passvault.bin");
+        auth_state_ref.save_to_file(config_path);
     } else {
         response.success = false;
         response.authorized = false;
@@ -696,11 +726,12 @@ fn get_key() -> Vec<u8> {
 }
 
 #[tauri::command]
-async fn authenticate(master_password: String) -> Result<bool, String> {
+async fn authenticate(app_handle: tauri::AppHandle, master_password: String) -> Result<bool, String> {
     // Open the file for reading
     let mut auth_state_ref = AUTH_STATE.lock().unwrap();
 
-    let filepath: &str = "./passvault.bin";
+    let filepath_string = get_config_path(app_handle);
+    let filepath: &str = filepath_string.as_str();
     if file_exists(filepath) {
         let success_loading = auth_state_ref.load_from_file(filepath);
         if (success_loading.unwrap())  {
@@ -740,12 +771,13 @@ async fn authenticate(master_password: String) -> Result<bool, String> {
 use typenum::U16;
 
 #[tauri::command]
-async fn write_entry(site: String, username: String, password: String) -> Result<SuccessResponse, String> {
+async fn write_entry(app_handle: tauri::AppHandle, site: String, username: String, password: String) -> Result<SuccessResponse, String> {
     let authorized = authorize();
 
     if authorized {
-        let filename = "./passvault.db";
-        let options = SqliteConnectOptions::new().filename(filename);
+        let filename_string = get_data_path(app_handle);
+        let filename: &str = filename_string.as_str();
+        let options = SqliteConnectOptions::new().filename(filename.clone());
 
         let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
             .await
@@ -935,6 +967,18 @@ print!("Yes, {:?}", ct);
 
 fn main() {
     tauri::Builder::default()
+        .setup(|app| {
+            let app_handle = app.handle();
+            let dir_path_string = get_config_dir_path(app_handle);
+            let dir_path: &str = dir_path_string.as_str();
+
+            if let Err(e) = fs::create_dir_all(dir_path) {
+                eprintln!("Error: {}", e);
+            } else {
+                println!("Directory '{}' created successfully", dir_path);
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, edit_entry, get_password, authenticate, authorize, check_time, change_unlock_time,change_password, start_app, lock_app])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
