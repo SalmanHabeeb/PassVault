@@ -58,70 +58,91 @@ function SettingsPage() {
   };
 
   const handleSecondsIncrement = async (value) => {
-    if (seconds + value > 59) {
-      await handleSetTime(minutes, 59);
-
-      return;
+    let totalMinutes = minutes;
+    let totalSeconds = seconds + value;
+    if (totalSeconds > 59) {
+      totalSeconds = 0;
+      totalMinutes += 1;
+    } else if (totalSeconds < 0) {
+      totalMinutes -= 1;
+      totalSeconds = 59;
     }
-    if (seconds + value < 0) {
-      await handleSetTime(minutes, 0);
-      return;
+    if (calculateTotalTime(totalMinutes, totalSeconds) < 15) {
+      totalSeconds = 15;
+      totalMinutes = 0;
+    } else if (calculateTotalTime(totalMinutes, totalSeconds) > 59 * 60 + 59) {
+      totalSeconds = 59;
+      totalMinutes = 59;
     }
-    if (calculateTotalTime(minutes, seconds + value) < 15) {
-      await handleSetTime(0, 15);
-
-      return;
-    }
-    await handleSetTime(minutes, seconds + value);
+    await handleSetTime(totalMinutes, totalSeconds);
   };
 
   const handleMinutesIncrement = async (value) => {
-    if (minutes + value > 59) {
-      await handleSetTime(59, 59);
+    let totalMinutes = minutes + value;
+    let totalSeconds = seconds;
 
-      return;
+    if (totalMinutes > 59) {
+      totalMinutes = 59;
+      totalSeconds = 59;
+    } else if (totalMinutes < 0) {
+      totalMinutes = 0;
+      totalSeconds = 15;
     }
-    if (minutes + value < 0) {
-      await handleSetTime(0, 15);
-      return;
+
+    if (calculateTotalTime(totalMinutes, totalSeconds) < 15) {
+      totalMinutes = 0;
+      totalSeconds = 15;
+    } else if (calculateTotalTime(totalMinutes, totalSeconds) > 59 * 60 + 59) {
+      totalMinutes = 59;
+      totalSeconds = 59;
     }
-    if (calculateTotalTime(minutes + value, seconds) < 15) {
-      await handleSetTime(0, 15);
-      return;
-    }
-    await handleSetTime(minutes + value, seconds);
+
+    await handleSetTime(totalMinutes, totalSeconds);
   };
 
   const handleMinutesChange = async (event) => {
-    if (parseInt(event.target.value) > 59) {
-      await handleSetTime(59, seconds);
-      return;
+    let totalMinutes = parseInt(event.target.value);
+    let totalSeconds = seconds;
+
+    if (totalMinutes > 59) {
+      totalMinutes = 59;
+      totalSeconds = 59;
+    } else if (totalMinutes < 0) {
+      totalMinutes = 0;
+      totalSeconds = 15;
     }
-    if (parseInt(event.target.value) < 0) {
-      await handleSetTime(0, 15);
-      return;
+
+    if (calculateTotalTime(totalMinutes, totalSeconds) < 15) {
+      totalMinutes = 0;
+      totalSeconds = 15;
+    } else if (calculateTotalTime(totalMinutes, totalSeconds) > 59 * 60 + 59) {
+      totalMinutes = 59;
+      totalSeconds = 59;
     }
-    if (calculateTotalTime(parseInt(event.target.value), seconds) < 15) {
-      await handleSetTime(0, 15);
-      return;
-    }
-    await handleSetTime(parseInt(event.target.value), seconds);
+
+    await handleSetTime(totalMinutes, totalSeconds);
   };
 
   const handleSecondsChange = async (event) => {
-    if (event.target.value > 59) {
-      await handleSetTime(minutes, 59);
-      return;
+    let totalMinutes = minutes;
+    let totalSeconds = parseInt(event.target.value);
+
+    if (totalSeconds > 59) {
+      totalSeconds = 0;
+      totalMinutes += 1;
+    } else if (totalSeconds < 0) {
+      totalMinutes -= 1;
+      totalSeconds = 59;
     }
-    if (event.target.value < 0) {
-      await handleSetTime(minutes, 0);
-      return;
+    if (calculateTotalTime(totalMinutes, totalSeconds) < 15) {
+      totalSeconds = 15;
+      totalMinutes = 0;
+    } else if (calculateTotalTime(totalMinutes, totalSeconds) > 59 * 60 + 59) {
+      totalSeconds = 59;
+      totalMinutes = 59;
     }
-    if (calculateTotalTime(minutes, parseInt(event.target.value)) < 15) {
-      await handleSetTime(0, 15);
-      return;
-    }
-    await handleSetTime(minutes, parseInt(event.target.value));
+
+    await handleSetTime(minutes, totalSeconds);
   };
 
   const handleSetTime = async (minutes, seconds) => {

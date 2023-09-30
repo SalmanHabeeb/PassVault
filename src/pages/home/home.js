@@ -1,21 +1,26 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./home.css";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 
 import { loginActions } from "../../state/loginSlice";
+import { homeActions } from "./state/homeSlice";
 
 import { invoke } from "@tauri-apps/api";
 
+import * as utils from "../../general/utils";
+import AuthDialog from "./components/auth/auth";
+import InvalidPasswordDialog from "../../general/components/invalid-password-dialog/invalid-password-dialog";
+import EditDialog from "./components/edit-dialog/edit-dialog";
+import DeleteDialog from "./components/delete-dialog/delete-dialog";
+import CreateDialog from "./components/create-dialog/create-dialog";
+
 function HomePage() {
   const dispatch = useDispatch();
+  let homeVar = useSelector((state) => state.home.prevOp);
   const [siteObjects, setSiteObjects] = useState([]);
   const [greeting, setGreeting] = useState("None");
   const [showAddDialog, setShowAddDialog] = useState(false);
 
-  const [showGeneratePassword, setShowGeneratePassword] = useState(false);
-  const [safePassword, setSafePassword] = useState("");
-  const generateRandomPasswordRef = useRef(null);
-  const generateRandomEditPasswordRef = useRef(null);
   const currentPercentage = useRef(0);
 
   const prevOp = useRef(null);
@@ -27,9 +32,6 @@ function HomePage() {
   const [showPassword, setShowPassword] = useState(
     new Array(siteObjects.length).fill(false)
   );
-
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showAuthPassword, setShowAuthPassword] = useState(false);
 
   const [time, setTime] = useState(0);
   const totalTime = useRef(0);
@@ -53,125 +55,62 @@ function HomePage() {
     }
   };
 
-  const handleOutsideClick = (event) => {
-    if (
-      generateRandomPasswordRef.current &&
-      !generateRandomPasswordRef.current.contains(event.target)
-    ) {
-      setShowGeneratePassword(false);
-    } else if (
-      generateRandomEditPasswordRef.current &&
-      !generateRandomEditPasswordRef.current.contains(event.target)
-    ) {
-      setShowGeneratePassword(false);
+  const handleCloseCreateDialog = async (args) => {
+    if (args.unauthorized) {
+      runAuthFlow();
+      prevOp.current = args.operation;
+      setPrevOpArgs(args.operationArgs);
+      return;
+    }
+    if (args.success) {
+      await getAllData();
     }
   };
 
-  const generateRandomPassword = () => {
-    let buffer = new Uint32Array(1);
-    window.crypto.getRandomValues(buffer);
-    const length = (buffer[0] % 9) + 8;
-    const charset =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+";
-    let password = [];
-    buffer = new Uint32Array(length);
-
-    window.crypto.getRandomValues(buffer);
-
-    for (let i = 0; i < length; i++) {
-      password.push(charset[buffer[i] % charset.length]);
+  const handleCloseEditDialog = async (args) => {
+    if (args.unauthorized) {
+      runAuthFlow();
+      prevOp.current = args.operation;
+      setPrevOpArgs(args.operationArgs);
+      return;
     }
-    console.log(password);
-
-    return password.join("");
-  };
-
-  const handleClickGeneratePassword = (password, elementId) => {
-    console.log(document.getElementById(elementId));
-    document.getElementById(elementId).password.value = password;
-    setShowGeneratePassword(false);
-  };
-
-  const handlePasswordChange = () => {
-    console.log("LINE 67");
-    if (!document.getElementById("password-dialog__form").checkValidity()) {
-      console.log("LINE 69");
-      setSafePassword(generateRandomPassword());
-      setShowGeneratePassword(true);
-      console.log(showGeneratePassword);
+    if (args.success) {
+      await getAllData();
     }
   };
 
-  const handleToggleShowNewPassword = () => {
-    setShowNewPassword(!showNewPassword);
-    const inputElement = document.getElementById(
-      "password-dialog__form"
-    ).password;
-    inputElement.focus();
-    const inputValue = inputElement.value;
-    inputElement.focus();
-    inputElement.value = "";
-    setTimeout(() => {
-      inputElement.value = inputValue;
-    }, 0);
-  };
-
-  const handleToggleShowAuthPassword = (event) => {
-    setShowAuthPassword(!showAuthPassword);
-    const inputElement = document.getElementById("auth-dialog__form").password;
-    const inputValue = inputElement.value;
-    inputElement.focus();
-    inputElement.value = "";
-    setTimeout(() => {
-      inputElement.value = inputValue;
-    }, 0);
-  };
-
-  const handleInvalidPassword = () => {
-    document.getElementById("invalid-password-dialog").showModal();
-  };
-
-  const handleAuth = async (e) => {
-    try {
-      let result = await invoke("authenticate", {
-        masterPassword: e.target.password.value,
-      });
-      console.log(result);
-      if (!result) {
-        handleInvalidPassword();
-        e.target.password.value = "";
+  const handleCloseAuthDialog = async (isAuthorized) => {
+    if (isAuthorized) {
+      executeFunc(prevOp.current, prevOpArgs);
+    } else {
+      if (
+        typeof prevOp.current === "function" &&
+        prevOp.current.toString() !== getAllData.toString()
+      ) {
         prevOp.current = null;
         setPrevOpArgs([]);
-        return;
       }
-    } catch (error) {
-      console.error(error);
     }
-    e.target.password.value = "";
-    console.log(prevOp);
-    await executeFunc(prevOp.current, prevOpArgs);
-    prevOp.current = null;
-    setPrevOpArgs([]);
+  };
+
+  const handleCloseDeleteDialog = async (args) => {
+    if (args.unauthorized) {
+      runAuthFlow();
+      prevOp.current = args.operation;
+      setPrevOpArgs(args.operationArgs);
+      return;
+    }
+    if (args.success) {
+      let newSiteObjects = siteObjects.slice(); // Create a shallow copy to avoid modifying the original array
+      newSiteObjects.splice(toDeleteIndex, 1);
+      setSiteObjects(newSiteObjects);
+      setToDeleteIndex(-1);
+    }
   };
 
   const runAuthFlow = () => {
     document.getElementById("auth-dialog").showModal();
-  };
-
-  const handleCancelAuthFlow = () => {
-    document.getElementById("auth-dialog__form").password.value = "";
-    setShowAuthPassword(false);
-    document.getElementById("auth-dialog").close();
-    if (
-      typeof prevOp.current === "function" &&
-      prevOp.current.toString() !== getAllData.toString()
-    ) {
-      console.log("164: ", prevOp.current);
-      console.log("165: ", getAllData);
-      console.log("166: ", getAllData === prevOp.current);
-      prevOp.current = null;
-      setPrevOpArgs([]);
-    }
+    console.log(homeVar);
   };
 
   const handleToggleShowPassword = async (index) => {
@@ -185,8 +124,6 @@ function HomePage() {
         if (!response.authorized) {
           runAuthFlow();
           prevOp.current = handleToggleShowPassword;
-          console.log(handleToggleShowPassword);
-          console.log(prevOp);
           setPrevOpArgs([index]);
           return;
         }
@@ -217,7 +154,6 @@ function HomePage() {
   };
 
   const handleAllEntries = (response) => {
-    // Adding the 'password' key to each object
     for (let i = 0; i < response.length; i++) {
       response[i].password = "password";
     }
@@ -226,7 +162,7 @@ function HomePage() {
 
   const handleClickAdder = () => {
     setShowAddDialog(true);
-    document.getElementById("password-dialog").showModal();
+    document.getElementById("create-dialog").showModal();
     console.log("show dialog");
   };
 
@@ -276,95 +212,6 @@ function HomePage() {
     }
   };
 
-  const handleEditEntrySubmit = async (e) => {
-    const newSite = e.target.site.value;
-    const newUsername = e.target.username.value;
-    const newPassword = e.target.password.value;
-    const editSite = siteObjects[toEditIndex].site;
-    const editUsername = siteObjects[toEditIndex].username;
-    console.log("Hello");
-    if (!newSite || !newUsername) {
-      return;
-    }
-    console.log({
-      newSite: newSite,
-      newUsername: newUsername,
-      newPassword: newPassword,
-      editSite: editSite,
-      editUsername: editUsername,
-    });
-    console.log("Hello");
-    try {
-      let result = await invoke("edit_entry", {
-        newSite: newSite,
-        newUsername: newUsername,
-        newPassword: newPassword,
-        editSite: editSite,
-        editUsername: editUsername,
-      });
-      if (!result.authorized) {
-        runAuthFlow();
-        prevOp.current = handleEditEntrySubmit;
-        setPrevOpArgs([e]);
-        return;
-      }
-      console.log(result);
-      if (result.success) {
-        invoke("get_entries", {})
-          // `invoke` returns a Promise
-          .then((response) => {
-            console.log(result, response);
-            handleAllEntries(response.entries);
-          })
-          .catch((err) => console.log(err));
-      }
-    } catch (error) {
-      console.error(error);
-    }
-    e.target.site.value = "";
-    e.target.username.value = "";
-    e.target.password.value = "";
-    setShowNewPassword(false);
-  };
-
-  const handleCreateNewEntrySubmit = async (e) => {
-    const site = e.target.site.value;
-    const username = e.target.username.value;
-    const password = e.target.password.value;
-    if (!site || !username || !password) {
-      return;
-    }
-    console.log(site, username, password);
-    try {
-      let result = await invoke("write_entry", {
-        site: site,
-        username: username,
-        password: password,
-      });
-      if (!result.authorized) {
-        runAuthFlow();
-        prevOp.current = handleCreateNewEntrySubmit;
-        setPrevOpArgs([e]);
-        return;
-      }
-      if (result.success) {
-        invoke("get_entries", {})
-          // `invoke` returns a Promise
-          .then((response) => {
-            console.log(result, response);
-            handleAllEntries(response.entries);
-          })
-          .catch((err) => console.log(err));
-      }
-    } catch (error) {
-      console.error(error);
-    }
-    e.target.site.value = "";
-    e.target.username.value = "";
-    e.target.password.value = "";
-    setShowNewPassword(false);
-  };
-
   const triggerDeleteEntryFlow = (index) => {
     setToDeleteIndex(index);
     document.getElementById("confirm-delete-dialog").showModal();
@@ -378,33 +225,6 @@ function HomePage() {
     editForm.username.value = siteObjects[index].username;
     editForm.password.value = "";
     editDialogBox.showModal();
-  };
-
-  const handleDeleteCancel = () => {
-    document.getElementById("confirm-delete-dialog").close();
-  };
-
-  const deleteEntrySubmit = async (index) => {
-    const site = siteObjects[index].site;
-    const username = siteObjects[index].username;
-    try {
-      let result = await invoke("delete_entry", {
-        site: site,
-        username: username,
-      });
-      if (!result.authorized) {
-        runAuthFlow();
-        prevOp.current = deleteEntrySubmit;
-        setPrevOpArgs([index]);
-        return;
-      }
-      let newSiteObjects = siteObjects.slice(); // Create a shallow copy to avoid modifying the original array
-      newSiteObjects.splice(index, 1);
-      setSiteObjects(newSiteObjects);
-      setToDeleteIndex(-1);
-    } catch (error) {
-      console.error(error);
-    }
   };
 
   const copyToClipBoard = async (index) => {
@@ -465,38 +285,6 @@ function HomePage() {
     };
   }, []);
 
-  useEffect(() => {
-    document.addEventListener("click", handleOutsideClick);
-    return () => {
-      document.removeEventListener("click", handleOutsideClick);
-    };
-  }, []);
-
-  useEffect(() => {
-    const dialog = document.getElementById("password-dialog");
-    const editDialog = document.getElementById("edit-dialog");
-    dialog.addEventListener("click", (event) => {
-      // check if the user clicked outside of the dialog
-      if (
-        document.body.contains(dialog) &&
-        !generateRandomPasswordRef.current.contains(event.target)
-      ) {
-        // set showGeneratePassword to false
-        setShowGeneratePassword(false);
-      }
-    });
-    editDialog.addEventListener("click", (event) => {
-      // check if the user clicked outside of the dialog
-      if (
-        document.body.contains(dialog) &&
-        !generateRandomEditPasswordRef.current.contains(event.target)
-      ) {
-        // set showGeneratePassword to false
-        setShowGeneratePassword(false);
-      }
-    });
-  }, []);
-
   const handleWindowKeyDown = (event) => {
     if (
       event.ctrlKey &&
@@ -551,7 +339,6 @@ function HomePage() {
       if (progressPercentage === 0) {
         currentPercentage.current = 0;
       }
-      console.log(progressPercentage, response.time_left);
       const duration = 1000;
       const increments = 10;
       const incrementPercentage =
@@ -562,7 +349,9 @@ function HomePage() {
           clearInterval(animationInterval);
         } else {
           currentPercentage.current += incrementPercentage;
-          buttonElement.style.background = `radial-gradient(closest-side, #00ff00 85%, transparent 80% 100%), conic-gradient(blue ${currentPercentage.current}%, orange 0)`;
+          if (buttonElement) {
+            buttonElement.style.background = `radial-gradient(closest-side, #00ff00 85%, transparent 80% 100%), conic-gradient(blue ${currentPercentage.current}%, orange 0)`;
+          }
         }
       };
       const animationInterval = setInterval(
@@ -596,326 +385,29 @@ function HomePage() {
 
   return (
     <div id="Home">
-      <dialog id="password-dialog" className="password-dialog">
-        <p>Enter new password</p>
-        <form
-          method="dialog"
-          id="password-dialog__form"
-          className="password-dialog__form"
-          onSubmit={handleCreateNewEntrySubmit}
-        >
-          <input
-            className="password-dialog__input"
-            id="password-dialog__site-input"
-            type="text"
-            key={1}
-            name="site"
-            placeholder="Site"
-            autoFocus
-            required
-          />
-          <input
-            className="password-dialog__input"
-            type="text"
-            key={2}
-            name="username"
-            placeholder="Username"
-            autoComplete="username"
-            required
-          />
-          <div className="password-dialog__input-container">
-            <input
-              className="password-dialog__input"
-              type={showNewPassword ? "text" : "password"}
-              key={3}
-              name="password"
-              placeholder="Password"
-              autoComplete="new-password"
-              onChange={handlePasswordChange}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                  if (!showGeneratePassword) {
-                    setSafePassword(generateRandomPassword());
-                    setShowGeneratePassword(true);
-                  }
-                  console.log(
-                    document.getElementById("password-dialog__form")
-                      .password_suggest
-                  );
-                  generateRandomPasswordRef.current.focus();
-                }
-              }}
-              autoFocus
-              required
-            />
-            <span
-              className="toggle-password"
-              onClick={handleToggleShowNewPassword}
-            >
-              <i className="material-icons">
-                {showNewPassword ? "visibility_off" : "visibility"}
-              </i>
-            </span>
-          </div>
-          <div
-            ref={generateRandomPasswordRef}
-            className="password-dialog__suggest-password"
-            name="password_suggest"
-            style={{ display: showGeneratePassword ? "block" : "none" }}
-            tabIndex={0}
-            onClick={() =>
-              handleClickGeneratePassword(safePassword, "password-dialog__form")
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleClickGeneratePassword(
-                  safePassword,
-                  "password-dialog__form"
-                );
-                e.preventDefault();
-                document
-                  .getElementById("password-dialog__form")
-                  .password.focus();
-              }
-              if (e.key === "ArrowDown") {
-                document
-                  .getElementById("password-dialog__form")
-                  .password.focus();
-              }
-              if (e.key === "ArrowUp") {
-                document
-                  .getElementById("password-dialog__form")
-                  .password.focus();
-              }
-            }}
-          >
-            Use Secure Password:{` ${safePassword}`}
-          </div>
-          <div className="password-dialog__form-button-container">
-            <button className="password-dialog__form-button" type="submit">
-              Save
-            </button>
-            <button
-              className="password-dialog__form-button"
-              type="button"
-              onClick={() => {
-                console.log(
-                  document.getElementById("password-dialog").children[1].site
-                );
-                document.getElementById(
-                  "password-dialog"
-                ).children[1].site.value = "";
-                document.getElementById(
-                  "password-dialog"
-                ).children[1].username.value = "";
-                document.getElementById(
-                  "password-dialog"
-                ).children[1].password.value = "";
-                document.getElementById("password-dialog").close();
-                setShowNewPassword(false);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </dialog>
-      <dialog id="edit-dialog" className="edit-dialog">
-        <p>Edit your entry:</p>
-        <form
-          method="dialog"
-          id="edit-dialog__form"
-          className="edit-dialog__form"
-          onSubmit={handleEditEntrySubmit}
-        >
-          <input
-            className="edit-dialog__input"
-            id="edit-dialog__site-input"
-            type="text"
-            key={1}
-            name="site"
-            placeholder="Site"
-            required
-          />
-          <input
-            className="edit-dialog__input"
-            type="text"
-            key={2}
-            name="username"
-            placeholder="Username"
-            autoComplete="username"
-            required
-          />
-          <div className="edit-dialog__input-container">
-            <input
-              id="edit-dialog__password-input"
-              className="edit-dialog__input"
-              type={showNewPassword ? "text" : "password"}
-              key={3}
-              name="password"
-              placeholder="Password"
-              autoComplete="new-password"
-              onChange={handlePasswordChange}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                  if (!showGeneratePassword) {
-                    setSafePassword(generateRandomPassword());
-                    setShowGeneratePassword(true);
-                  }
-                  console.log(
-                    document.getElementById("edit-dialog__form")
-                      .password_suggest
-                  );
-                  generateRandomEditPasswordRef.current.focus();
-                }
-              }}
-              autoFocus
-            />
-            <span
-              className="toggle-password"
-              onClick={handleToggleShowNewPassword}
-            >
-              <i className="material-icons">
-                {showNewPassword ? "visibility_off" : "visibility"}
-              </i>
-            </span>
-          </div>
-          <div
-            ref={generateRandomEditPasswordRef}
-            className="edit-dialog__suggest-password"
-            name="password_suggest"
-            style={{ display: showGeneratePassword ? "block" : "none" }}
-            tabIndex={0}
-            onClick={() =>
-              handleClickGeneratePassword(safePassword, "edit-dialog__form")
-            }
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleClickGeneratePassword(safePassword, "edit-dialog__form");
-                e.preventDefault();
-                document.getElementById("edit-dialog__form").password.focus();
-              }
-              if (e.key === "ArrowDown") {
-                document.getElementById("edit-dialog__form").password.focus();
-              }
-              if (e.key === "ArrowUp") {
-                document.getElementById("edit-dialog__form").password.focus();
-              }
-            }}
-          >
-            Use Secure Password:{` ${safePassword}`}
-          </div>
-          <div className="edit-dialog__form-button-container">
-            <button className="edit-dialog__form-button" type="submit">
-              Save
-            </button>
-            <button
-              className="edit-dialog__form-button"
-              type="button"
-              onClick={() => {
-                console.log(
-                  document.getElementById("edit-dialog").children[1].site
-                );
-                document.getElementById("edit-dialog").children[1].site.value =
-                  "";
-                document.getElementById(
-                  "edit-dialog"
-                ).children[1].username.value = "";
-                document.getElementById(
-                  "edit-dialog"
-                ).children[1].password.value = "";
-                document.getElementById("edit-dialog").close();
-                setShowNewPassword(false);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </dialog>
-      <dialog id="invalid-password-dialog" className="invalid-password-dialog">
-        <p>Invalid password</p>
-        <form method="dialog" type="submit">
-          <button className="invalid-password-dialog__form-button">Ok</button>
-        </form>
-      </dialog>
-      <dialog
-        id="confirm-delete-dialog"
-        className="confirm-delete-dialog"
-        onSubmit={() => deleteEntrySubmit(toDeleteIndex)}
-      >
-        <p>Are you sure you want to delete this entry:</p>
-        <p>
-          Site: {toDeleteIndex >= 0 ? siteObjects[toDeleteIndex].site : null}
-        </p>
-        <p>
-          Username:{" "}
-          {toDeleteIndex >= 0 ? siteObjects[toDeleteIndex].username : null}
-        </p>
-        <form method="dialog" type="submit">
-          <div className="confirm-delete-dialog__form-button-container">
-            <button
-              className="confirm-delete-dialog__form-button"
-              type="submit"
-            >
-              Yes
-            </button>
-            <button
-              id="confirm-delete-dialog__form-button-cancel"
-              className="confirm-delete-dialog__form-button"
-              type="button"
-              onClick={handleDeleteCancel}
-              autoFocus
-            >
-              No
-            </button>
-          </div>
-        </form>
-      </dialog>
-      <dialog id="auth-dialog" className="auth-dialog">
-        <form
-          id="auth-dialog__form"
-          className="auth-dialog__form"
-          method="dialog"
-          onSubmit={handleAuth}
-        >
-          <div className="auth-dialog__input-container">
-            <input
-              id="auth-dialog__input"
-              className="auth-dialog__input"
-              name="password"
-              type={showAuthPassword ? "text" : "password"}
-              placeholder="Password"
-              autoComplete="new-password"
-              required
-              autoFocus
-            />
-            <span className="auth-dialog__eye-icon">
-              <i
-                className="material-icons"
-                onClick={(event) => handleToggleShowAuthPassword(event)}
-                style={{
-                  cursor: "pointer",
-                }}
-              >
-                {showAuthPassword ? "visibility_off" : "visibility"}
-              </i>
-            </span>
-          </div>
-          <div className="auth-dialog__form-button-container">
-            <button className="auth-dialog__form-button" type="submit">
-              Unlock
-            </button>
-            <button
-              className="auth-dialog__form-button"
-              type="button"
-              onClick={handleCancelAuthFlow}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </dialog>
+      <CreateDialog handleCloseDialog={handleCloseCreateDialog} />
+      <EditDialog
+        handleCloseDialog={handleCloseEditDialog}
+        toEditSite={
+          siteObjects[toEditIndex] ? siteObjects[toEditIndex].site : null
+        }
+        toEditUserName={
+          siteObjects[toEditIndex] ? siteObjects[toEditIndex].username : null
+        }
+      />
+      <InvalidPasswordDialog />
+      <DeleteDialog
+        handleCloseDialog={handleCloseDeleteDialog}
+        toDeleteSite={
+          siteObjects[toDeleteIndex] ? siteObjects[toDeleteIndex].site : null
+        }
+        toDeleteUserName={
+          siteObjects[toDeleteIndex]
+            ? siteObjects[toDeleteIndex].username
+            : null
+        }
+      />
+      <AuthDialog handleCloseDialog={handleCloseAuthDialog} />
       <div className="home__container">
         <p className="home__welcome">Welcome!</p>
       </div>
@@ -959,16 +451,7 @@ function HomePage() {
                   {time === 0 ? "lock_open" : "lock_clock"}
                 </i>
               </button>
-              {/* <div className="progress-wrapper">
-                <div
-                  className="progress-bar"
-                  style={{
-                    strokeDasharray: `${50 * Math.PI} ${50 * Math.PI}`,
-                    strokeDashoffset:
-                      50 * Math.PI - ((time - 60) / 60) * (50 * Math.PI),
-                  }}
-                ></div>
-              </div> */}
+
               <div id="help-lock" className="help">
                 {time === 0 ? "Unlock Passwords" : "Lock the passwords"}
                 <div className="arrow"></div>

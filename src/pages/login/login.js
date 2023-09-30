@@ -5,6 +5,7 @@ import { useDispatch } from "react-redux";
 import { loginActions } from "../../state/loginSlice";
 
 import { invoke } from "@tauri-apps/api";
+import InvalidPasswordDialog from "../../general/components/invalid-password-dialog/invalid-password-dialog";
 
 function LoginPage() {
   const [isNewUser, setIsNewUser] = useState(false);
@@ -116,15 +117,7 @@ function LoginPage() {
   return (
     <div id="Login">
       <div className="login__container">
-        <dialog
-          id="invalid-password-dialog"
-          className="invalid-password-dialog"
-        >
-          <p>Invalid password</p>
-          <form method="dialog" type="submit">
-            <button className="invalid-password-dialog__form-button">Ok</button>
-          </form>
-        </dialog>
+        <InvalidPasswordDialog />
         <form id="login__form" className="login__form" onSubmit={handleSubmit}>
           <div className="login__form-input-container">
             {isNewUser ? (
