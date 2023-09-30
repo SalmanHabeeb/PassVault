@@ -1,0 +1,67 @@
+.create-dialog {
+  width: 300px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  background-color: black; /* Set the background color to black */
+  color: orange; /* Set the font color to orange */
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+/* Style the dialog content */
+.create-dialog p {
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.create-dialog__form {
+  width: 80%;
+}
+
+.create-dialog__input-container {
+  position: relative;
+}
+
+/* Style the input fields */
+.create-dialog__input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.toggle-password {
+  color: blue;
+  position: absolute;
+  top: 17%;
+  right: -8%;
+  cursor: pointer;
+}
+
+.create-dialog__form-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+/* Style the OK button */
+.create-dialog__form-button {
+  background-color: orange;
+  color: white;
+  border: none;
+  width: 80px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.create-dialog__form-button:hover {
+  background-color: #ff8000; /* Darker orange on hover edit {
+    width: 300px;
+    padding: 20px;
+    border: 1px solid #ccc;
+    background-color: black; /* Set the background color to black */
+  color: orange; /* Set the font color to orange */
+  border-radius: 5px;
+  overflow: hidden;
+}

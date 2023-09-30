@@ -1,0 +1,48 @@
+.confirm-delete-dialog {
+  width: 300px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  background-color: black; /* Set the background color to black */
+  color: orange; /* Set the font color to orange */
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+/* Style the dialog content */
+.confirm-delete-dialog p {
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.confirm-delete-dialog__form {
+  width: 80%;
+}
+
+/* Style the input fields */
+.confirm-delete-dialog__input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.confirm-delete-dialog__form-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+/* Style the OK button */
+.confirm-delete-dialog__form-button {
+  background-color: orange;
+  color: white;
+  border: none;
+  width: 80px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.confirm-delete-dialog__form-button:hover {
+  background-color: #ff8000; /* Darker orange on hover */
+}

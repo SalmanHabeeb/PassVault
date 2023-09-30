@@ -1,0 +1,60 @@
+/* Style the dialog */
+.auth-dialog {
+  width: 300px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  background-color: black; /* Set the background color to black */
+  color: orange; /* Set the font color to orange */
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+/* Style the dialog content */
+.auth-dialog p {
+  font-size: 18px;
+  margin-bottom: 15px;
+}
+
+.auth-dialog__form {
+  width: 80%;
+}
+
+.auth-dialog__input-container {
+  position: relative;
+}
+
+.auth-dialog__eye-icon {
+  position: absolute;
+  top: 20%;
+  right: -8%;
+  color: blue;
+}
+
+/* Style the input fields */
+.auth-dialog__input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.auth-dialog__form-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 20px;
+}
+
+/* Style the OK button */
+.auth-dialog__form-button {
+  background-color: orange;
+  color: white;
+  border: none;
+  width: 80px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.auth-dialog__form-button:hover {
+  background-color: #ff8000; /* Darker orange on hover */
+}
