@@ -3,14 +3,23 @@ import "./table-menu.css";
 
 import * as utils from "../../../../general/utils";
 
-function TableMenu({
+type Props = {
+  time: number,
+  handleClickAdder: (event: any) => void,
+  handleClickLock: (event: any) => void,
+  handleClickUnLock: (event: any) => void,
+  handleClickExit: (event: any) => void,
+  handleClickSettings: (event: React.MouseEvent) => void,
+}
+
+const TableMenu: React.FC<Props>  = ({
   time,
   handleClickAdder,
   handleClickLock,
   handleClickUnLock,
   handleClickExit,
   handleClickSettings,
-}) {
+}: Props) => {
   return (
     <div className="table-header-button-menu">
       <div
