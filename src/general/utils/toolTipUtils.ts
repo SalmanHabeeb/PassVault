@@ -1,21 +1,18 @@
-const generatePassword = require("./generatePassword");
-
-const showHelp = (id) => {
+const showHelp = (id: string): void => {
   const tooltip = document.getElementById(id);
   if (tooltip) {
     tooltip.style.display = "block";
   }
 };
 
-const hideHelp = (id) => {
+const hideHelp = (id: string): void => {
   const tooltip = document.getElementById(id);
   if (tooltip) {
     tooltip.style.display = "none";
   }
 };
 
-module.exports = {
-  generatePassword,
+export {
   showHelp,
   hideHelp,
 };

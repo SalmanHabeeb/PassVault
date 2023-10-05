@@ -16,10 +16,10 @@ function TableMenu({
       <div
         className="table-header-button-container"
         onMouseOver={() => {
-          utils.showHelp("help-adder");
+          utils.toolTipUtils.showHelp("help-adder");
         }}
         onMouseOut={() => {
-          utils.hideHelp("help-adder");
+          utils.toolTipUtils.hideHelp("help-adder");
         }}
       >
         <button className="table-header-button" onClick={handleClickAdder}>
@@ -36,10 +36,10 @@ function TableMenu({
           className="table-header-button-lock-passwords"
           onClick={time === 0 ? handleClickUnLock : handleClickLock}
           onMouseOver={() => {
-            utils.showHelp("help-lock");
+            utils.toolTipUtils.showHelp("help-lock");
           }}
           onMouseOut={() => {
-            utils.hideHelp("help-lock");
+            utils.toolTipUtils.hideHelp("help-lock");
           }}
         >
           <i className="material-icons">
@@ -58,10 +58,10 @@ function TableMenu({
           className="table-header-button"
           onClick={handleClickExit}
           onMouseOver={() => {
-            utils.showHelp("help-lock-app");
+            utils.toolTipUtils.showHelp("help-lock-app");
           }}
           onMouseOut={() => {
-            utils.hideHelp("help-lock-app");
+            utils.toolTipUtils.hideHelp("help-lock-app");
           }}
         >
           <i className="material-icons">exit_to_app</i>
@@ -77,10 +77,10 @@ function TableMenu({
           className="table-header-button"
           onClick={handleClickSettings}
           onMouseOver={() => {
-            utils.showHelp("help-settings-app");
+            utils.toolTipUtils.showHelp("help-settings-app");
           }}
           onMouseOut={() => {
-            utils.hideHelp("help-settings-app");
+            utils.toolTipUtils.hideHelp("help-settings-app");
           }}
         >
           <i className="material-icons">settings</i>

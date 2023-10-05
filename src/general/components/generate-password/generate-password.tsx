@@ -14,13 +14,13 @@ interface PasswordInputElement extends HTMLInputElement {
 }
 
 
-function GeneratePassword({
+const GeneratePassword: React.FC<Props> = ({
   showGeneratePassword,
   generateRandomPasswordRef,
   safePassword,
   handleClickGeneratePassword,
   formId,
-}: Props) {
+}: Props) => {
 
   return (
     <div

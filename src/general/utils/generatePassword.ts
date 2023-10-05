@@ -1,4 +1,4 @@
-const generateRandomPassword = () => {
+const generateRandomPassword = (): string => {
   let buffer = new Uint32Array(1);
   window.crypto.getRandomValues(buffer);
   const length = (buffer[0] % 9) + 8;
@@ -17,6 +17,6 @@ const generateRandomPassword = () => {
   return password.join("");
 };
 
-module.exports = {
+export {
   generateRandomPassword,
 };
