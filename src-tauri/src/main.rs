@@ -42,7 +42,9 @@ use argon2::{
     Argon2
 };
 
-use rand::{Rng, thread_rng, rngs::OsRng};
+extern crate rand;
+use rand::{Rng, thread_rng, rngs::OsRng, RngCore, SeedableRng};
+use rand_chacha::ChaChaRng;
 
 // extern crate aes;
 // extern crate pbkdf2;
@@ -166,8 +168,11 @@ impl AuthState {
     }
 
     fn set_new_key(&mut self, master_password: String) -> Result<(), String> {
-        let mut rng = thread_rng();
-        let enckey: [u8; 16] = rng.gen();
+        let mut rng = OsRng;
+
+        let mut enckey = [0u8; 16];
+        rng.fill_bytes(&mut enckey);
+
         self.encryption_key = Some(enckey.to_vec());
         let iv = [0x24; 16];
         let mut output_key_material = [0x42; 16]; // Can be any desired size
