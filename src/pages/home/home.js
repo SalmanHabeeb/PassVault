@@ -3,23 +3,22 @@ import "./home.css";
 import { useDispatch, useSelector } from "react-redux";
 
 import { loginActions } from "../../state/loginSlice";
-import { homeActions } from "./state/homeSlice";
 
 import { invoke } from "@tauri-apps/api";
 
-import * as utils from "../../general/utils";
 import AuthDialog from "./components/auth/auth";
 import InvalidPasswordDialog from "../../general/components/invalid-password-dialog/invalid-password-dialog";
 import EditDialog from "./components/edit-dialog/edit-dialog";
 import DeleteDialog from "./components/delete-dialog/delete-dialog";
 import CreateDialog from "./components/create-dialog/create-dialog";
+import TableHeader from "./components/table-header/table-header";
+import TableRow from "./components/table-row/table-row";
+import TableMenu from "./components/table-menu/table-menu";
 
 function HomePage() {
   const dispatch = useDispatch();
   let homeVar = useSelector((state) => state.home.prevOp);
   const [siteObjects, setSiteObjects] = useState([]);
-  const [greeting, setGreeting] = useState("None");
-  const [showAddDialog, setShowAddDialog] = useState(false);
 
   const currentPercentage = useRef(0);
 
@@ -40,20 +39,6 @@ function HomePage() {
     new Array(siteObjects.length).fill(false)
   );
   var timeoutId = null;
-
-  const showHelp = (id) => {
-    const tooltip = document.getElementById(id);
-    if (tooltip) {
-      tooltip.style.display = "block";
-    }
-  };
-
-  const hideHelp = (id) => {
-    const tooltip = document.getElementById(id);
-    if (tooltip) {
-      tooltip.style.display = "none";
-    }
-  };
 
   const handleCloseCreateDialog = async (args) => {
     if (args.unauthorized) {
@@ -161,7 +146,6 @@ function HomePage() {
   };
 
   const handleClickAdder = () => {
-    setShowAddDialog(true);
     document.getElementById("create-dialog").showModal();
     console.log("show dialog");
   };
@@ -414,162 +398,31 @@ function HomePage() {
       <div className="table-container">
         <div className="table-title">
           <h2>Saved Passwords</h2>
-          <div className="table-header-button-menu">
-            <div
-              className="table-header-button-container"
-              onMouseOver={() => {
-                showHelp("help-adder");
-              }}
-              onMouseOut={() => {
-                hideHelp("help-adder");
-              }}
-            >
-              <button
-                className="table-header-button"
-                onClick={handleClickAdder}
-              >
-                <i className="material-icons">add</i>
-              </button>
-              <div id="help-adder" className="help">
-                Add new password
-                <div className="arrow"></div>
-              </div>
-            </div>
-            <div className="table-header-button-container">
-              <button
-                id="table-header-button-lock-passwords"
-                className="table-header-button-lock-passwords"
-                onClick={time === 0 ? runAuthFlow : handleLockPasswords}
-                onMouseOver={() => {
-                  showHelp("help-lock");
-                }}
-                onMouseOut={() => {
-                  hideHelp("help-lock");
-                }}
-              >
-                <i className="material-icons">
-                  {time === 0 ? "lock_open" : "lock_clock"}
-                </i>
-              </button>
-
-              <div id="help-lock" className="help">
-                {time === 0 ? "Unlock Passwords" : "Lock the passwords"}
-                <div className="arrow"></div>
-              </div>
-            </div>
-            <div className="table-header-button-container">
-              <button
-                id="table-header-button-lock-app"
-                className="table-header-button"
-                onClick={handleLockApp}
-                onMouseOver={() => {
-                  showHelp("help-lock-app");
-                }}
-                onMouseOut={() => {
-                  hideHelp("help-lock-app");
-                }}
-              >
-                <i className="material-icons">exit_to_app</i>
-              </button>
-              <div id="help-lock-app" className="help">
-                Lock app
-                <div className="arrow"></div>
-              </div>
-            </div>
-            <div className="table-header-button-container">
-              <button
-                id="table-header-button-settings"
-                className="table-header-button"
-                onClick={handleClickSettings}
-                onMouseOver={() => {
-                  showHelp("help-settings-app");
-                }}
-                onMouseOut={() => {
-                  hideHelp("help-settings-app");
-                }}
-              >
-                <i className="material-icons">settings</i>
-              </button>
-              <div id="help-settings-app" className="help">
-                Settings
-                <div className="arrow"></div>
-              </div>
-            </div>
-          </div>
+          <TableMenu
+            time={time}
+            handleClickAdder={handleClickAdder}
+            handleClickLock={handleLockPasswords}
+            handleClickUnLock={runAuthFlow}
+            handleClickExit={handleLockApp}
+            handleClickSettings={handleClickSettings}
+          />
         </div>
         {siteObjects ? (
           <table className="site-table">
-            <thead>
-              <tr>
-                <th>Site</th>
-                <th>Username</th>
-                <th>Password</th>
-                <th></th>
-              </tr>
-            </thead>
+            <TableHeader />
             <tbody>
               {siteObjects.map((siteObject, index) => (
                 <>
-                  <tr className="site-table__row" key={index}>
-                    <td>{siteObject.site}</td>
-                    <td>{siteObject.username}</td>
-                    <td style={{ width: "30%", borderRight: "none" }}>
-                      <div style={{ position: "relative" }}>
-                        <span
-                          style={{
-                            display: "inline-block",
-                            WebkitTextSecurity: showPassword[index]
-                              ? "none"
-                              : "disc",
-                          }}
-                        >
-                          {siteObject.password}
-                        </span>
-                      </div>
-                    </td>
-                    <td style={{ borderLeft: "none" }}>
-                      <div>
-                        <i
-                          className="material-icons"
-                          onClick={() => handleToggleShowPassword(index)}
-                          style={{
-                            cursor: "pointer",
-                          }}
-                        >
-                          {showPassword[index]
-                            ? "visibility_off"
-                            : "visibility"}
-                        </i>
-                        <i
-                          className="material-icons"
-                          onClick={() => copyToClipBoard(index)}
-                          style={{
-                            cursor: "pointer",
-                          }}
-                        >
-                          {clickedCopy[index] ? "done" : "content_copy"}
-                        </i>
-                        <i
-                          className="material-icons"
-                          onClick={() => triggerDeleteEntryFlow(index)}
-                          style={{
-                            cursor: "pointer",
-                          }}
-                        >
-                          delete
-                        </i>
-                        <i
-                          className="material-icons"
-                          onClick={() => triggerEditEntryFlow(index)}
-                          style={{
-                            cursor: "pointer",
-                          }}
-                        >
-                          edit
-                        </i>
-                      </div>
-                    </td>
-                  </tr>
+                  <TableRow
+                    index={index}
+                    siteObject={siteObject ? siteObject : null}
+                    showPassword={showPassword[index]}
+                    clickedCopy={clickedCopy[index]}
+                    onVisibilityToggle={handleToggleShowPassword}
+                    onCopyClick={copyToClipBoard}
+                    onDeleteClick={triggerDeleteEntryFlow}
+                    onEditClick={triggerEditEntryFlow}
+                  />
                 </>
               ))}
             </tbody>
