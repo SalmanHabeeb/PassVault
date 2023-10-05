@@ -164,9 +164,6 @@ function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
                   );
                   setShowGeneratePassword(true);
                 }
-                console.log(
-                  document.getElementById("edit-dialog__form").password_suggest
-                );
                 generateRandomEditPasswordRef.current.focus();
               }
             }}

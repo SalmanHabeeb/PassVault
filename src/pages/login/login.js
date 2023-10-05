@@ -119,7 +119,7 @@ function LoginPage() {
       <div className="login__container">
         <InvalidPasswordDialog />
         <form id="login__form" className="login__form" onSubmit={handleSubmit}>
-          <div className="login__form-input-container">
+          <div className="login__form-input-wrapper">
             {isNewUser ? (
               <label className="login__form-input-label">
                 Create your account
@@ -129,7 +129,7 @@ function LoginPage() {
                 Enter your password
               </label>
             )}
-            <div className="login__form__input-container">
+            <div className="login__form-input-container">
               <input
                 id="login__form_password"
                 className="login__form_password"
@@ -142,11 +142,10 @@ function LoginPage() {
                   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                     if (!showGeneratePassword) {
                       setSafePassword(generateRandomPassword());
-                      setShowGeneratePassword(true);
+                      if (isNewUser) {
+                        setShowGeneratePassword(true);
+                      }
                     }
-                    console.log(
-                      document.getElementById("login__form").password_suggest
-                    );
                     generateRandomPasswordRef.current.focus();
                   }
                 }}
@@ -163,7 +162,7 @@ function LoginPage() {
               </span>
               <div
                 ref={generateRandomPasswordRef}
-                className="suggest-password"
+                className="suggest-password login__form-suggest-password"
                 style={{ display: showGeneratePassword ? "block" : "none" }}
                 tabIndex={0}
                 onClick={() => handleClickGeneratePassword(safePassword)}

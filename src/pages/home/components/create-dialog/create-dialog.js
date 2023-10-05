@@ -155,10 +155,7 @@ function CreateDialog({ handleCloseDialog }) {
                   );
                   setShowGeneratePassword(true);
                 }
-                console.log(
-                  document.getElementById("create-dialog__form")
-                    .password_suggest
-                );
+
                 generateRandomPasswordRef.current.focus();
               }
             }}
