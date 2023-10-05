@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import "./home.css";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 
 import { loginActions } from "../../state/loginSlice";
 
@@ -17,7 +17,6 @@ import TableMenu from "./components/table-menu/table-menu";
 
 function HomePage() {
   const dispatch = useDispatch();
-  let homeVar = useSelector((state) => state.home.prevOp);
   const [siteObjects, setSiteObjects] = useState([]);
 
   const currentPercentage = useRef(0);
@@ -95,7 +94,6 @@ function HomePage() {
 
   const runAuthFlow = () => {
     document.getElementById("auth-dialog").showModal();
-    console.log(homeVar);
   };
 
   const handleToggleShowPassword = async (index) => {

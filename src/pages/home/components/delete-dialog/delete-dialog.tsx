@@ -3,14 +3,27 @@ import "./delete-dialog.css";
 
 import { invoke } from "@tauri-apps/api";
 
-function DeleteDialog({ handleCloseDialog, toDeleteSite, toDeleteUserName }) {
-  const handleDeleteCancel = () => {
-    document.getElementById("confirm-delete-dialog").close();
-  };
+type Props = {
+  handleCloseDialog: (object: any) => void,
+  toDeleteSite: string,
+  toDeleteUserName: string,
+};
 
-  const deleteEntrySubmit = async (site, username) => {
+const DeleteDialog: React.FC<Props> = ({
+  handleCloseDialog,
+  toDeleteSite,
+  toDeleteUserName,
+}: Props) => {
+
+  const handleDeleteCancel = () => {
+    const dialog = document.getElementById("confirm-delete-dialog") as HTMLDialogElement;
+    dialog.close();
+  };
+  
+
+  const deleteEntrySubmit = async (site: string, username: string) => {
     try {
-      let result = await invoke("delete_entry", {
+      let result: any = await invoke("delete_entry", {
         site: site,
         username: username,
       });
@@ -38,7 +51,7 @@ function DeleteDialog({ handleCloseDialog, toDeleteSite, toDeleteUserName }) {
       <p>Are you sure you want to delete this entry:</p>
       <p>Site: {toDeleteSite ? toDeleteSite : null}</p>
       <p>Username: {toDeleteUserName ? toDeleteUserName : null}</p>
-      <form method="dialog" type="submit">
+      <form method="dialog">
         <div className="confirm-delete-dialog__form-button-container">
           <button className="confirm-delete-dialog__form-button" type="submit">
             Yes
@@ -56,6 +69,6 @@ function DeleteDialog({ handleCloseDialog, toDeleteSite, toDeleteUserName }) {
       </form>
     </dialog>
   );
-}
+};
 
 export default DeleteDialog;

@@ -1,7 +1,7 @@
 import React from "react";
 import "./table-header.css";
 
-function TableHeader() {
+const TableHeader: React.FC<void> = () => {
   return (
     <thead>
       <tr>
