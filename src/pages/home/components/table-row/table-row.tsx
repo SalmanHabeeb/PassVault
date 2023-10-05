@@ -1,7 +1,24 @@
 import React from "react";
 import "./table-row.css";
 
-function TableRow({
+interface SiteObject extends Object {
+  site: string,
+  username: string,
+  password: string,
+}
+
+type Props = {
+  index: number;
+  siteObject: SiteObject;
+  showPassword: boolean;
+  clickedCopy: boolean;
+  onVisibilityToggle: (index: number) => void;
+  onCopyClick: (index: number) => void;
+  onDeleteClick: (index: number) => void;
+  onEditClick: (index: number) => void;
+}
+
+const TableRow: React.FC<Props> = ({
   index,
   siteObject,
   showPassword,
@@ -10,21 +27,19 @@ function TableRow({
   onCopyClick,
   onDeleteClick,
   onEditClick,
-}) {
+}: Props) => {
   return siteObject ? (
     <tr className="site-table__row" key={index}>
       <td>{siteObject.site}</td>
       <td>{siteObject.username}</td>
       <td style={{ width: "30%", borderRight: "none" }}>
         <div style={{ position: "relative" }}>
-          <span
-            style={{
-              display: "inline-block",
-              WebkitTextSecurity: showPassword ? "none" : "disc",
-            }}
-          >
-            {siteObject.password}
-          </span>
+          <input
+            className="site-table__row-password"
+            type={showPassword ? "text" : "password"}
+            value={siteObject.password}
+            readOnly
+          />
         </div>
       </td>
       <td style={{ borderLeft: "none" }}>
