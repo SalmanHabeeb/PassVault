@@ -6,25 +6,47 @@ import { invoke } from "@tauri-apps/api";
 import * as utils from "../../../../general/utils";
 import GeneratePassword from "../../../../general/components/generate-password/generate-password";
 
-function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
+interface PasswordFormElement extends HTMLInputElement {
+  site: HTMLInputElement;
+  username: HTMLInputElement;
+  password: HTMLInputElement;
+}
+
+interface Result {
+  authorized: boolean;
+  success: boolean;
+}
+
+type Props = {
+  handleCloseDialog: (object: Object) => void,
+  toEditSite: number,
+  toEditUserName: number,
+};
+
+const EditDialog: React.FC<Props> = ({
+  handleCloseDialog,
+  toEditSite,
+  toEditUserName,
+}: Props) => {
   const [safePassword, setSafePassword] = useState("");
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showGeneratePassword, setShowGeneratePassword] = useState(false);
 
   const generateRandomEditPasswordRef = useRef(null);
 
-  const handleOutsideEditDialogClick = (event) => {
+  const handleOutsideEditDialogClick = (event: MouseEvent) => {
     if (
       generateRandomEditPasswordRef.current &&
-      !generateRandomEditPasswordRef.current.contains(event.target)
+      !(generateRandomEditPasswordRef.current as HTMLElement).contains(event.target as HTMLElement)
     ) {
       setShowGeneratePassword(false);
     }
   };
 
-  const handleClickGeneratePassword = (password, elementId) => {
+  const handleClickGeneratePassword = (password: string, elementId: string) => {
     console.log(document.getElementById(elementId));
-    document.getElementById(elementId).password.value = password;
+    const formElement = document.getElementById(elementId) as PasswordFormElement;
+    formElement.password.value = password;
     setShowGeneratePassword(false);
   };
 
@@ -36,7 +58,8 @@ function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
 
   const handleToggleShowNewPassword = () => {
     setShowNewPassword(!showNewPassword);
-    const inputElement = document.getElementById("edit-dialog__form").password;
+    const formElement = document.getElementById("edit-dialog__form") as PasswordFormElement;
+    const inputElement = formElement.password;
     inputElement.focus();
     const inputValue = inputElement.value;
     inputElement.focus();
@@ -46,10 +69,11 @@ function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
     }, 0);
   };
 
-  const handleEditEntrySubmit = async (e) => {
-    const newSite = e.target.site.value;
-    const newUsername = e.target.username.value;
-    const newPassword = e.target.password.value;
+  const handleEditEntrySubmit = async (e: React.FormEvent) => {
+    const formElement = document.getElementById("edit-dialog__form") as PasswordFormElement;
+    const newSite = formElement.site.value;
+    const newUsername = formElement.username.value;
+    const newPassword = formElement.password.value;
     const editSite = toEditSite;
     const editUsername = toEditUserName;
     console.log("Hello");
@@ -65,7 +89,7 @@ function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
     });
     console.log("Hello");
     try {
-      let result = await invoke("edit_entry", {
+      let result: Result = await invoke("edit_entry", {
         newSite: newSite,
         newUsername: newUsername,
         newPassword: newPassword,
@@ -92,9 +116,9 @@ function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
     } catch (error) {
       console.error(error);
     }
-    e.target.site.value = "";
-    e.target.username.value = "";
-    e.target.password.value = "";
+    formElement.site.value = "";
+    formElement.username.value = "";
+    formElement.password.value = "";
     setShowNewPassword(false);
   };
 
@@ -106,12 +130,12 @@ function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
   }, []);
 
   useEffect(() => {
-    const dialog = document.getElementById("edit-dialog");
+    const dialog = document.getElementById("edit-dialog") as HTMLDialogElement;
     dialog.addEventListener("click", (event) => {
       // check if the user clicked outside of the dialog
       if (
-        document.body.contains(dialog) &&
-        !generateRandomEditPasswordRef.current.contains(event.target)
+        document.body.contains(dialog) && generateRandomEditPasswordRef.current &&
+        !(generateRandomEditPasswordRef.current as HTMLElement).contains(event.target as HTMLElement)
       ) {
         // set showGeneratePassword to false
         setShowGeneratePassword(false);
@@ -164,7 +188,9 @@ function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
                   );
                   setShowGeneratePassword(true);
                 }
-                generateRandomEditPasswordRef.current.focus();
+                if(generateRandomEditPasswordRef.current) {
+                (generateRandomEditPasswordRef.current as HTMLInputElement).focus();
+              }
               }
             }}
             autoFocus
@@ -193,18 +219,13 @@ function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
             className="edit-dialog__form-button"
             type="button"
             onClick={() => {
-              console.log(
-                document.getElementById("edit-dialog").children[1].site
-              );
-              document.getElementById("edit-dialog").children[1].site.value =
+              const dialogElement = document.getElementById("edit-dialog") as HTMLDialogElement;
+              const formElement = dialogElement.children[1] as PasswordFormElement;
+              formElement.site.value =
                 "";
-              document.getElementById(
-                "edit-dialog"
-              ).children[1].username.value = "";
-              document.getElementById(
-                "edit-dialog"
-              ).children[1].password.value = "";
-              document.getElementById("edit-dialog").close();
+              formElement.username.value = "";
+              formElement.password.value = "";
+              dialogElement.close();
               setShowNewPassword(false);
             }}
           >
@@ -214,6 +235,6 @@ function EditDialog({ handleCloseDialog, toEditSite, toEditUserName }) {
       </form>
     </dialog>
   );
-}
+};
 
 export default EditDialog;

@@ -3,22 +3,33 @@ import "./auth.css";
 
 import { invoke } from "@tauri-apps/api";
 
-function AuthDialog({ handleCloseDialog }) {
+
+interface PasswordFormElement extends HTMLInputElement {
+  password: HTMLInputElement;
+}
+
+type Props = {
+  handleCloseDialog: (isAuthenticated: boolean) => void,
+}
+
+const AuthDialog: React.FC<Props> = ({ handleCloseDialog }) => {
   const [showAuthPassword, setShowAuthPassword] = useState(false);
 
   const handleInvalidPassword = () => {
-    document.getElementById("invalid-password-dialog").showModal();
+    const element = document.getElementById("invalid-password-dialog") as HTMLDialogElement;
+    element.showModal();
   };
 
-  const handleAuth = async (e) => {
+  const handleAuth = async (e: React.FormEvent<HTMLFormElement>) => {
+    const element =  e.target as PasswordFormElement;
     try {
       let result = await invoke("authenticate", {
-        masterPassword: e.target.password.value,
+        masterPassword: element.password.value,
       });
       console.log(result);
       if (!result) {
         handleInvalidPassword();
-        e.target.password.value = "";
+        element.password.value = "";
         handleCloseDialog(false);
         return;
       }
@@ -27,13 +38,13 @@ function AuthDialog({ handleCloseDialog }) {
       handleCloseDialog(false);
       return;
     }
-    e.target.password.value = "";
+    element.password.value = "";
     handleCloseDialog(true);
   };
 
-  const handleToggleShowAuthPassword = (event) => {
+  const handleToggleShowAuthPassword = (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
     setShowAuthPassword(!showAuthPassword);
-    const inputElement = document.getElementById("auth-dialog__form").password;
+    const inputElement = (document.getElementById("auth-dialog__form") as PasswordFormElement).password;
     const inputValue = inputElement.value;
     inputElement.focus();
     inputElement.value = "";
@@ -43,9 +54,11 @@ function AuthDialog({ handleCloseDialog }) {
   };
 
   const handleCancelAuthFlow = () => {
-    document.getElementById("auth-dialog__form").password.value = "";
+    const formElement = document.getElementById("auth-dialog__form") as PasswordFormElement;
+    formElement.password.value = "";
     setShowAuthPassword(false);
-    document.getElementById("auth-dialog").close();
+    const dialogElement = document.getElementById("auth-dialog") as HTMLDialogElement;
+    dialogElement.close();
     handleCloseDialog(false);
   };
 

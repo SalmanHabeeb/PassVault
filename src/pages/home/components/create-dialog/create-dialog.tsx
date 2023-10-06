@@ -7,7 +7,22 @@ import { invoke } from "@tauri-apps/api";
 
 import GeneratePassword from "../../../../general/components/generate-password/generate-password";
 
-function CreateDialog({ handleCloseDialog }) {
+interface PasswordFormElement extends HTMLInputElement {
+  site: HTMLInputElement;
+  username: HTMLInputElement;
+  password: HTMLInputElement;
+}
+
+interface Result {
+  authorized: boolean;
+  success: boolean;
+}
+
+type Props = {
+  handleCloseDialog: (object: Object) => void,
+}
+
+const CreateDialog: React.FC<Props> = ({ handleCloseDialog }: Props) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showGeneratePassword, setShowGeneratePassword] = useState(false);
   const [safePassword, setSafePassword] = useState("");
@@ -16,7 +31,8 @@ function CreateDialog({ handleCloseDialog }) {
 
   const handlePasswordChange = () => {
     console.log("LINE 67");
-    if (!document.getElementById("create-dialog__form").checkValidity()) {
+    const formElement = document.getElementById("create-dialog__form") as HTMLFormElement;
+    if (!formElement.checkValidity()) {
       console.log("LINE 69");
       setSafePassword(utils.generatePassword.generateRandomPassword());
       setShowGeneratePassword(true);
@@ -24,17 +40,19 @@ function CreateDialog({ handleCloseDialog }) {
     }
   };
 
-  const handleClickGeneratePassword = (password, elementId) => {
+  const handleClickGeneratePassword = (password: string, elementId: string) => {
     console.log(document.getElementById(elementId));
-    document.getElementById(elementId).password.value = password;
+    const formElement = document.getElementById(elementId) as PasswordFormElement;
+    formElement.password.value = password;
     setShowGeneratePassword(false);
   };
 
   const handleToggleShowNewPassword = () => {
     setShowNewPassword(!showNewPassword);
-    const inputElement = document.getElementById(
+    const formElement = document.getElementById(
       "create-dialog__form"
-    ).password;
+    ) as PasswordFormElement;
+    const inputElement = formElement.password;
     inputElement.focus();
     const inputValue = inputElement.value;
     inputElement.focus();
@@ -44,17 +62,17 @@ function CreateDialog({ handleCloseDialog }) {
     }, 0);
   };
 
-  const handleCreateNewEntrySubmit = async (e) => {
-    console.log(e, e.target);
-    const site = e.target.site.value;
-    const username = e.target.username.value;
-    const password = e.target.password.value;
+  const handleCreateNewEntrySubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const formElement = e.target as PasswordFormElement;
+    const site = formElement.site.value;
+    const username = formElement.username.value;
+    const password = formElement.password.value;
     if (!site || !username || !password) {
       return;
     }
     console.log(site, username, password);
     try {
-      let result = await invoke("write_entry", {
+      let result: Result = await invoke("write_entry", {
         site: site,
         username: username,
         password: password,
@@ -74,20 +92,21 @@ function CreateDialog({ handleCloseDialog }) {
     } catch (error) {
       console.error(error);
     }
-    e.target.site.value = "";
-    e.target.username.value = "";
-    e.target.password.value = "";
+    formElement.site.value = "";
+    formElement.username.value = "";
+    formElement.password.value = "";
     setShowNewPassword(false);
   };
 
-  const handleOutsideCreateDialogClick = (event) => {
+  const handleOutsideCreateDialogClick = (event: MouseEvent) => {
     if (
       generateRandomPasswordRef.current &&
-      !generateRandomPasswordRef.current.contains(event.target)
+      !(generateRandomPasswordRef.current as HTMLElement).contains(event.target as HTMLElement)
     ) {
       setShowGeneratePassword(false);
     }
   };
+  
 
   useEffect(() => {
     document.addEventListener("click", handleOutsideCreateDialogClick);
@@ -97,12 +116,12 @@ function CreateDialog({ handleCloseDialog }) {
   }, []);
 
   useEffect(() => {
-    const dialog = document.getElementById("create-dialog");
+    const dialog = document.getElementById("create-dialog") as HTMLDialogElement;
     dialog.addEventListener("click", (event) => {
       // check if the user clicked outside of the dialog
       if (
-        document.body.contains(dialog) &&
-        !generateRandomPasswordRef.current.contains(event.target)
+        document.body.contains(dialog) && generateRandomPasswordRef.current &&
+        !(generateRandomPasswordRef.current as HTMLElement).contains(event.target as Node)
       ) {
         // set showGeneratePassword to false
         setShowGeneratePassword(false);
@@ -155,8 +174,10 @@ function CreateDialog({ handleCloseDialog }) {
                   );
                   setShowGeneratePassword(true);
                 }
-
-                generateRandomPasswordRef.current.focus();
+                if(generateRandomPasswordRef.current) {
+                  const input = generateRandomPasswordRef.current as HTMLInputElement;
+                  input.focus();
+                }
               }
             }}
             autoFocus
@@ -186,12 +207,12 @@ function CreateDialog({ handleCloseDialog }) {
             className="create-dialog__form-button"
             type="button"
             onClick={() => {
-              const element =
-                document.getElementById("create-dialog").children[1];
+              const dialogElement = document.getElementById("create-dialog") as HTMLDialogElement;
+                const element = dialogElement.children[1] as PasswordFormElement;
               element.site.value = "";
               element.username.value = "";
               element.password.value = "";
-              document.getElementById("create-dialog").close();
+              dialogElement.close();
               setShowNewPassword(false);
             }}
           >
