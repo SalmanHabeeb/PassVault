@@ -17,7 +17,7 @@ interface Result {
   altered: boolean;
 }
 
-const LoginPage: React.FC<void> = () => {
+const LoginPage = () => {
   const [isNewUser, setIsNewUser] = useState(false);
   const [showGeneratePassword, setShowGeneratePassword] = useState(false);
   const [safePassword, setSafePassword] = useState("");

@@ -6,9 +6,11 @@ import HomePage from "./pages/home/home";
 import LoginPage from "./pages/login/login";
 import SettingsPage from "./pages/settings/settings";
 
+import { RootState } from "./state/store";
+
 function App() {
-  let isLoggedIn = useSelector((state) => state.login.isLoggedIn);
-  let settings = useSelector((state) => state.login.settings);
+  let isLoggedIn = useSelector((state: RootState) => state.login.isLoggedIn);
+  let settings = useSelector((state: RootState) => state.login.settings);
   if (settings) {
     return <SettingsPage />;
   } else if (isLoggedIn) {
