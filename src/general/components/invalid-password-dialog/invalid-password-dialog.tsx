@@ -1,7 +1,7 @@
 import React from "react";
 import "./invalid-password-dialog.css";
 
-const InvalidPasswordDialog: React.FC<void> = () => {
+const InvalidPasswordDialog = () => {
   return (
     <dialog id="invalid-password-dialog" className="invalid-password-dialog">
       <p>Invalid password</p>

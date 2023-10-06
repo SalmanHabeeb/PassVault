@@ -18,9 +18,9 @@ interface Result {
 }
 
 type Props = {
-  handleCloseDialog: (object: Object) => void,
-  toEditSite: number,
-  toEditUserName: number,
+  handleCloseDialog: (object: any) => void,
+  toEditSite: string | null,
+  toEditUserName: string | null,
 };
 
 const EditDialog: React.FC<Props> = ({

@@ -5,8 +5,8 @@ import { invoke } from "@tauri-apps/api";
 
 type Props = {
   handleCloseDialog: (object: any) => void,
-  toDeleteSite: string,
-  toDeleteUserName: string,
+  toDeleteSite: string | null,
+  toDeleteUserName: string | null,
 };
 
 const DeleteDialog: React.FC<Props> = ({
@@ -21,7 +21,7 @@ const DeleteDialog: React.FC<Props> = ({
   };
   
 
-  const deleteEntrySubmit = async (site: string, username: string) => {
+  const deleteEntrySubmit = async (site: string | null, username: string | null) => {
     try {
       let result: any = await invoke("delete_entry", {
         site: site,

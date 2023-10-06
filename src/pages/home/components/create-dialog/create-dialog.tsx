@@ -13,13 +13,20 @@ interface PasswordFormElement extends HTMLInputElement {
   password: HTMLInputElement;
 }
 
+interface ArgumentObject extends Object {
+  unauthorized: boolean;
+  operation: any;
+  operationArgs: any;
+  success: boolean;
+}
+
 interface Result {
   authorized: boolean;
   success: boolean;
 }
 
 type Props = {
-  handleCloseDialog: (object: Object) => void,
+  handleCloseDialog: (object: ArgumentObject) => Promise<void>,
 }
 
 const CreateDialog: React.FC<Props> = ({ handleCloseDialog }: Props) => {
@@ -85,10 +92,16 @@ const CreateDialog: React.FC<Props> = ({ handleCloseDialog }: Props) => {
           unauthorized: true,
           operation: handleCreateNewEntrySubmit,
           operationArgs: [e],
+          success: false,
         });
         return;
       }
-      handleCloseDialog({ success: result.success });
+      handleCloseDialog({
+        unauthorized: false,
+        operation: handleCreateNewEntrySubmit,
+        operationArgs: [e],
+        success: result.success,
+      });
     } catch (error) {
       console.error(error);
     }

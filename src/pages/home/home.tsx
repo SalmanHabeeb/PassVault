@@ -15,14 +15,42 @@ import TableHeader from "./components/table-header/table-header";
 import TableRow from "./components/table-row/table-row";
 import TableMenu from "./components/table-menu/table-menu";
 
-function HomePage() {
+interface ArgumentObject extends Object {
+  unauthorized: boolean;
+  operation: any;
+  operationArgs: any;
+  success: boolean;
+}
+
+interface PasswordFormElement extends HTMLInputElement {
+  site: HTMLInputElement;
+  username: HTMLInputElement;
+  password: HTMLInputElement;
+}
+
+interface SiteObject extends HTMLInputElement {
+  site: string;
+  username: string;
+  password: string;
+}
+
+interface Result {
+  authorized: boolean;
+  success: boolean;
+  password: string;
+  entries: Array<any>;
+  unlock_time: number;
+  time_left: number;
+}
+
+const HomePage = () => {
   const dispatch = useDispatch();
-  const [siteObjects, setSiteObjects] = useState([]);
+  const [siteObjects, setSiteObjects] = useState<SiteObject[]>([]);
 
   const currentPercentage = useRef(0);
 
-  const prevOp = useRef(null);
-  const [prevOpArgs, setPrevOpArgs] = useState([]);
+  const prevOp = useRef<Function | null>(null);
+  const [prevOpArgs, setPrevOpArgs] = useState<any[]>([]);
 
   const [toDeleteIndex, setToDeleteIndex] = useState(-1);
   const [toEditIndex, setToEditIndex] = useState(-1);
@@ -37,9 +65,9 @@ function HomePage() {
   const [clickedCopy, setClickedCopy] = useState(
     new Array(siteObjects.length).fill(false)
   );
-  var timeoutId = null;
+  var timeoutId: any = null;
 
-  const handleCloseCreateDialog = async (args) => {
+  const handleCloseCreateDialog = async (args: ArgumentObject) => {
     if (args.unauthorized) {
       runAuthFlow();
       prevOp.current = args.operation;
@@ -51,7 +79,7 @@ function HomePage() {
     }
   };
 
-  const handleCloseEditDialog = async (args) => {
+  const handleCloseEditDialog = async (args: ArgumentObject) => {
     if (args.unauthorized) {
       runAuthFlow();
       prevOp.current = args.operation;
@@ -63,13 +91,13 @@ function HomePage() {
     }
   };
 
-  const handleCloseAuthDialog = async (isAuthorized) => {
+  const handleCloseAuthDialog = async (isAuthorized: boolean) => {
     if (isAuthorized) {
       executeFunc(prevOp.current, prevOpArgs);
     } else {
       if (
         typeof prevOp.current === "function" &&
-        prevOp.current.toString() !== getAllData.toString()
+        (prevOp.current as Function).toString() !== getAllData.toString()
       ) {
         prevOp.current = null;
         setPrevOpArgs([]);
@@ -77,7 +105,7 @@ function HomePage() {
     }
   };
 
-  const handleCloseDeleteDialog = async (args) => {
+  const handleCloseDeleteDialog = async (args: ArgumentObject) => {
     if (args.unauthorized) {
       runAuthFlow();
       prevOp.current = args.operation;
@@ -93,14 +121,16 @@ function HomePage() {
   };
 
   const runAuthFlow = () => {
-    document.getElementById("auth-dialog").showModal();
+    const dialogElement = 
+    document.getElementById("auth-dialog") as HTMLDialogElement;
+    dialogElement.showModal();
   };
 
-  const handleToggleShowPassword = async (index) => {
+  const handleToggleShowPassword = async (index: number) => {
     let password;
     if (!showPassword[index]) {
       try {
-        let response = await invoke("get_password", {
+        let response: Result = await invoke("get_password", {
           site: siteObjects[index].site,
           username: siteObjects[index].username,
         });
@@ -136,7 +166,7 @@ function HomePage() {
     setShowPassword(updatedShowPassword);
   };
 
-  const handleAllEntries = (response) => {
+  const handleAllEntries = (response: SiteObject[]) => {
     for (let i = 0; i < response.length; i++) {
       response[i].password = "password";
     }
@@ -144,7 +174,9 @@ function HomePage() {
   };
 
   const handleClickAdder = () => {
-    document.getElementById("create-dialog").showModal();
+    const dialogElement = 
+    document.getElementById("create-dialog") as HTMLDialogElement;
+    dialogElement.showModal();
     console.log("show dialog");
   };
 
@@ -184,7 +216,7 @@ function HomePage() {
     sessionStorage.setItem("settings", "true");
   };
 
-  const executeFunc = async (func, args) => {
+  const executeFunc = async (func: Function | null, args: any[]) => {
     console.log(func);
     console.log(args, typeof args);
     if (typeof func === "function") {
@@ -194,26 +226,27 @@ function HomePage() {
     }
   };
 
-  const triggerDeleteEntryFlow = (index) => {
+  const triggerDeleteEntryFlow = (index: number) => {
     setToDeleteIndex(index);
-    document.getElementById("confirm-delete-dialog").showModal();
+    const dialogElement = 
+    document.getElementById("confirm-delete-dialog") as HTMLDialogElement;dialogElement.showModal();
   };
 
-  const triggerEditEntryFlow = (index) => {
+  const triggerEditEntryFlow = (index: number) => {
     setToEditIndex(index);
-    const editDialogBox = document.getElementById("edit-dialog");
-    const editForm = document.getElementById("edit-dialog__form");
+    const editDialogBox = document.getElementById("edit-dialog") as HTMLDialogElement;
+    const editForm = document.getElementById("edit-dialog__form") as PasswordFormElement;
     editForm.site.value = siteObjects[index].site;
     editForm.username.value = siteObjects[index].username;
     editForm.password.value = "";
     editDialogBox.showModal();
   };
 
-  const copyToClipBoard = async (index) => {
+  const copyToClipBoard = async (index: number) => {
     const updatedClickedCopy = [...clickedCopy];
     let password;
     try {
-      let response = await invoke("get_password", {
+      let response: Result = await invoke("get_password", {
         site: siteObjects[index].site,
         username: siteObjects[index].username,
       });
@@ -245,7 +278,7 @@ function HomePage() {
 
   const getAllData = async () => {
     try {
-      let response = await invoke("get_entries", {});
+      let response: Result = await invoke("get_entries", {});
       if (!response.authorized) {
         runAuthFlow();
         prevOp.current = getAllData;
@@ -267,7 +300,7 @@ function HomePage() {
     };
   }, []);
 
-  const handleWindowKeyDown = (event) => {
+  const handleWindowKeyDown = (event: KeyboardEvent) => {
     if (
       event.ctrlKey &&
       ((event.key === "L" && event.getModifierState("CapsLock")) ||
@@ -309,7 +342,7 @@ function HomePage() {
 
   const checkTime = async () => {
     try {
-      let response = await invoke("check_time", {});
+      let response: Result = await invoke("check_time", {});
       setTime(response.time_left);
       const buttonElement = document.getElementById(
         "table-header-button-lock-passwords"
@@ -348,7 +381,7 @@ function HomePage() {
   useEffect(() => {
     invoke("check_time", {})
       .then((response) => {
-        totalTime.current = response.unlock_time;
+        totalTime.current = (response as Result).unlock_time;
         console.log(response);
       })
       .catch((error) => {
@@ -429,6 +462,6 @@ function HomePage() {
       </div>
     </div>
   );
-}
+};
 
 export default HomePage;

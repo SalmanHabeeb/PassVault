@@ -9,7 +9,7 @@ interface SiteObject extends Object {
 
 type Props = {
   index: number;
-  siteObject: SiteObject;
+  siteObject: SiteObject | null;
   showPassword: boolean;
   clickedCopy: boolean;
   onVisibilityToggle: (index: number) => void;

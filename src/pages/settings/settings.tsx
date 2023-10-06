@@ -1,11 +1,24 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, ChangeEvent } from "react";
 import "./settings.css";
 import { useDispatch } from "react-redux";
 
 import { loginActions } from "../../state/loginSlice";
 import { invoke } from "@tauri-apps/api";
 
-function SettingsPage() {
+interface PasswordFormElement extends HTMLInputElement {
+  password: HTMLInputElement;
+  currentPassword: HTMLInputElement;
+  newPassword: HTMLInputElement;
+  login__form_button: HTMLButtonElement;
+}
+
+interface Result {
+  authorized: boolean;
+  success: boolean;
+  unlock_time: number;
+}
+
+const SettingsPage = () => {
   const dispatch = useDispatch();
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -15,8 +28,8 @@ function SettingsPage() {
   const [minutes, setMinutes] = useState(0);
 
   const [showAuthPassword, setShowAuthPassword] = useState(false);
-  const prevOp = useRef(null);
-  const [prevOpArgs, setPrevOpArgs] = useState([]);
+  const prevOp = useRef<Function | null>(null);
+  const [prevOpArgs, setPrevOpArgs] = useState<any[]>([]);
 
   const handleBackClick = () => {
     dispatch(loginActions.setSettings(false));
@@ -25,9 +38,10 @@ function SettingsPage() {
 
   const handleToggleShowCurrentPassword = () => {
     setShowCurrentPassword(!showCurrentPassword);
-    const inputElement = document.getElementById(
+    const formElement = document.getElementById(
       "change-password-form"
-    ).currentPassword;
+    ) as PasswordFormElement;
+    const inputElement = formElement.currentPassword;
     const inputValue = inputElement.value;
     inputElement.focus();
     inputElement.value = "";
@@ -38,9 +52,10 @@ function SettingsPage() {
 
   const handleToggleShowNewPassword = () => {
     setShowNewPassword(!showNewPassword);
-    const inputElement = document.getElementById(
+    const formElement = document.getElementById(
       "change-password-form"
-    ).newPassword;
+    ) as PasswordFormElement;
+    const inputElement = formElement.newPassword;
     const inputValue = inputElement.value;
     inputElement.focus();
     inputElement.value = "";
@@ -53,11 +68,11 @@ function SettingsPage() {
     setShowChangePassword(!showChangePassword);
   };
 
-  const calculateTotalTime = (minutes, seconds) => {
+  const calculateTotalTime = (minutes: number, seconds: number) => {
     return minutes * 60 + seconds;
   };
 
-  const handleSecondsIncrement = async (value) => {
+  const handleSecondsIncrement = async (value: number) => {
     let totalMinutes = minutes;
     let totalSeconds = seconds + value;
     if (totalSeconds > 59) {
@@ -77,7 +92,7 @@ function SettingsPage() {
     await handleSetTime(totalMinutes, totalSeconds);
   };
 
-  const handleMinutesIncrement = async (value) => {
+  const handleMinutesIncrement = async (value: number) => {
     let totalMinutes = minutes + value;
     let totalSeconds = seconds;
 
@@ -100,7 +115,7 @@ function SettingsPage() {
     await handleSetTime(totalMinutes, totalSeconds);
   };
 
-  const handleMinutesChange = async (event) => {
+  const handleMinutesChange = async (event: any) => {
     let totalMinutes = parseInt(event.target.value);
     let totalSeconds = seconds;
 
@@ -123,7 +138,7 @@ function SettingsPage() {
     await handleSetTime(totalMinutes, totalSeconds);
   };
 
-  const handleSecondsChange = async (event) => {
+  const handleSecondsChange = async (event: any) => {
     let totalMinutes = minutes;
     let totalSeconds = parseInt(event.target.value);
 
@@ -145,9 +160,9 @@ function SettingsPage() {
     await handleSetTime(minutes, totalSeconds);
   };
 
-  const handleSetTime = async (minutes, seconds) => {
+  const handleSetTime = async (minutes: number, seconds: number) => {
     try {
-      let response = await invoke("change_unlock_time", {
+      let response: Result = await invoke("change_unlock_time", {
         newTime: calculateTotalTime(minutes, seconds),
       });
       console.log(response);
@@ -166,15 +181,16 @@ function SettingsPage() {
     }
   };
 
-  const handleChangePassword = async (event) => {
+  const handleChangePassword = async (event: React.FormEvent) => {
     event.preventDefault();
-    const currentPassword = event.target.currentPassword.value;
-    const newPassword = event.target.newPassword.value;
+    const formElement = event.target as PasswordFormElement;
+    const currentPassword = formElement.currentPassword.value;
+    const newPassword = formElement.newPassword.value;
     if (!currentPassword || !newPassword) {
       return;
     }
     try {
-      let response = await invoke("change_password", {
+      let response: Result = await invoke("change_password", {
         currentPassword: currentPassword,
         newPassword: newPassword,
       });
@@ -186,14 +202,13 @@ function SettingsPage() {
     } catch (error) {
       console.error(error);
     }
-    event.target.currentPassword.value = "";
-    event.target.newPassword.value = "";
+    formElement.currentPassword.value = "";
+    formElement.newPassword.value = "";
     setShowChangePassword(false);
   };
 
   const handleChangePasswordCancel = () => {
-    const element = document.getElementById("change-password-form");
-    console.log(element.target);
+    const element = document.getElementById("change-password-form") as PasswordFormElement;
     element.currentPassword.value = "";
     element.newPassword.value = "";
     setShowChangePassword(false);
@@ -202,10 +217,10 @@ function SettingsPage() {
   };
 
   const handleInvalidPassword = () => {
-    document.getElementById("invalid-password-dialog").showModal();
+    (document.getElementById("invalid-password-dialog") as HTMLDialogElement).showModal();
   };
 
-  const executeFunc = async (func, args) => {
+  const executeFunc = async (func: Function | null, args: any[]) => {
     console.log(func);
     console.log(args, typeof args);
     if (typeof func === "function") {
@@ -218,18 +233,19 @@ function SettingsPage() {
   };
 
   const runAuthFlow = () => {
-    document.getElementById("auth-dialog").showModal();
+    (document.getElementById("auth-dialog") as HTMLDialogElement).showModal();
   };
 
-  const handleAuth = async (e) => {
+  const handleAuth = async (e: React.FormEvent) => {
+    const formElement = e.target as PasswordFormElement;
     try {
       let result = await invoke("authenticate", {
-        masterPassword: e.target.password.value,
+        masterPassword: formElement.password.value,
       });
       console.log(result);
       if (!result) {
         handleInvalidPassword();
-        e.target.password.value = "";
+        formElement.password.value = "";
         prevOp.current = null;
         setPrevOpArgs([]);
         return;
@@ -237,13 +253,13 @@ function SettingsPage() {
     } catch (error) {
       console.error(error);
     }
-    e.target.password.value = "";
+    formElement.password.value = "";
     console.log(prevOp);
     await executeFunc(prevOp.current, prevOpArgs);
   };
-  const handleToggleShowAuthPassword = (event) => {
+  const handleToggleShowAuthPassword = (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
     setShowAuthPassword(!showAuthPassword);
-    const inputElement = document.getElementById("auth-dialog__form").password;
+    const inputElement = (document.getElementById("auth-dialog__form") as PasswordFormElement).password;
     const inputValue = inputElement.value;
     inputElement.focus();
     inputElement.value = "";
@@ -252,16 +268,16 @@ function SettingsPage() {
     }, 0);
   };
   const handleCancelAuthFlow = () => {
-    document.getElementById("auth-dialog__form").password.value = "";
+    (document.getElementById("auth-dialog__form") as PasswordFormElement).password.value = "";
     setShowAuthPassword(false);
-    document.getElementById("auth-dialog").close();
+    (document.getElementById("auth-dialog") as HTMLDialogElement).close();
   };
 
   useEffect(() => {
     invoke("check_time", {})
       .then((response) => {
-        setSeconds(response.unlock_time % 60);
-        setMinutes(Math.floor(response.unlock_time / 60));
+        setSeconds((response as Result).unlock_time % 60);
+        setMinutes(Math.floor((response as Result).unlock_time / 60));
       })
       .catch((error) => {
         console.error(error);
@@ -272,8 +288,8 @@ function SettingsPage() {
     <div id="Settings">
       <dialog id="invalid-password-dialog" className="invalid-password-dialog">
         <p>Invalid password</p>
-        <form method="dialog" type="submit">
-          <button className="invalid-password-dialog__form-button">Ok</button>
+        <form method="dialog">
+          <button className="invalid-password-dialog__form-button" type="submit">Ok</button>
         </form>
       </dialog>
       <dialog id="auth-dialog" className="auth-dialog">
@@ -361,7 +377,7 @@ function SettingsPage() {
                         <i
                           className="material-icons"
                           onClick={(event) =>
-                            handleToggleShowCurrentPassword(event)
+                            handleToggleShowCurrentPassword()
                           }
                           style={{
                             cursor: "pointer",
@@ -387,7 +403,7 @@ function SettingsPage() {
                         <i
                           className="material-icons"
                           onClick={(event) =>
-                            handleToggleShowNewPassword(event)
+                            handleToggleShowNewPassword()
                           }
                           style={{
                             cursor: "pointer",
@@ -407,7 +423,7 @@ function SettingsPage() {
                       <button
                         className="change-password-form__button"
                         type="button"
-                        onClick={(event) => handleChangePasswordCancel(event)}
+                        onClick={(event) => handleChangePasswordCancel()}
                       >
                         Cancel
                       </button>
@@ -424,13 +440,13 @@ function SettingsPage() {
                 <div className="settings__section-time-nested-container">
                   <label
                     className="settings__section-time-input-label"
-                    for="minutesInput"
+                    htmlFor="minutesInput"
                   >
                     M
                   </label>
                   <label
                     className="settings__section-time-input-label"
-                    for="secondsInput"
+                    htmlFor="secondsInput"
                   >
                     S
                   </label>
@@ -501,6 +517,6 @@ function SettingsPage() {
       </div>
     </div>
   );
-}
+};
 
 export default SettingsPage;

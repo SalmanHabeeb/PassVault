@@ -7,7 +7,17 @@ import { loginActions } from "../../state/loginSlice";
 import { invoke } from "@tauri-apps/api";
 import InvalidPasswordDialog from "../../general/components/invalid-password-dialog/invalid-password-dialog";
 
-function LoginPage() {
+interface PasswordFormElement extends HTMLInputElement {
+  password: HTMLInputElement;
+  login__form_button: HTMLButtonElement;
+}
+
+interface Result {
+  is_new_user: boolean;
+  altered: boolean;
+}
+
+const LoginPage: React.FC<void> = () => {
   const [isNewUser, setIsNewUser] = useState(false);
   const [showGeneratePassword, setShowGeneratePassword] = useState(false);
   const [safePassword, setSafePassword] = useState("");
@@ -17,7 +27,7 @@ function LoginPage() {
 
   const handleToggleShowPassword = () => {
     setShowPassword(!showPassword);
-    const inputElement = document.getElementById("login__form_password");
+    const inputElement = document.getElementById("login__form_password") as HTMLInputElement;
     inputElement.focus();
     const inputValue = inputElement.value;
     inputElement.focus();
@@ -27,10 +37,10 @@ function LoginPage() {
     }, 0);
   };
 
-  const handleOutsideClick = (event) => {
+  const handleOutsideClick = (event: MouseEvent) => {
     if (
       generateRandomPasswordRef.current &&
-      !generateRandomPasswordRef.current.contains(event.target)
+      !(generateRandomPasswordRef.current as HTMLElement).contains(event.target as HTMLElement)
     ) {
       setShowGeneratePassword(false);
     }
@@ -62,22 +72,25 @@ function LoginPage() {
     }
   };
 
-  const handleClickGeneratePassword = (password) => {
+  const handleClickGeneratePassword = (password: string) => {
     console.log(document.getElementById("login__form"));
-    document.getElementById("login__form").password.value = password;
+    const formElement = document.getElementById("login__form") as PasswordFormElement;
+    formElement.password.value = password;
     setShowGeneratePassword(false);
   };
 
   const handleInvalidPassword = () => {
-    document.getElementById("invalid-password-dialog").showModal();
+    const dialogElement = document.getElementById("invalid-password-dialog") as HTMLDialogElement;
+    dialogElement.showModal();
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    e.target.login__form_button.disabled = true;
+    const formElement = e.target as PasswordFormElement;
+    formElement.login__form_button.disabled = true;
     try {
       let result = await invoke("authenticate", {
-        masterPassword: e.target.password.value,
+        masterPassword: formElement.password.value,
       });
       console.log(result);
       if (result) {
@@ -89,13 +102,13 @@ function LoginPage() {
     } catch (error) {
       console.error(error);
     }
-    e.target.login__form_button.disabled = false;
+    formElement.login__form_button.disabled = false;
   };
 
   useEffect(() => {
     const start_app = async () => {
       try {
-        let response = await invoke("start_app", {});
+        let response: Result = await invoke("start_app", {});
         if (response.is_new_user) {
           setIsNewUser(true);
         } else if (response.altered) {
@@ -143,7 +156,8 @@ function LoginPage() {
                         setShowGeneratePassword(true);
                       }
                     }
-                    generateRandomPasswordRef.current.focus();
+                    if(generateRandomPasswordRef.current) {
+                    (generateRandomPasswordRef.current as HTMLInputElement).focus();}
                   }
                 }}
                 autoFocus
@@ -164,14 +178,15 @@ function LoginPage() {
                 tabIndex={0}
                 onClick={() => handleClickGeneratePassword(safePassword)}
                 onKeyDown={(e) => {
+                  const formElement = document.getElementById("login__form") as PasswordFormElement;
                   if (e.key === "Enter") {
                     handleClickGeneratePassword(safePassword);
                   }
                   if (e.key === "ArrowDown") {
-                    document.getElementById("login__form").password.focus();
+                    formElement.password.focus();
                   }
                   if (e.key === "ArrowUp") {
-                    document.getElementById("login__form").password.focus();
+                    formElement.password.focus();
                   }
                 }}
               >
@@ -192,6 +207,6 @@ function LoginPage() {
       </div>
     </div>
   );
-}
+};
 
 export default LoginPage;
