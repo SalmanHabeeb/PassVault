@@ -120,15 +120,12 @@ function LoginPage() {
         <InvalidPasswordDialog />
         <form id="login__form" className="login__form" onSubmit={handleSubmit}>
           <div className="login__form-input-wrapper">
-            {isNewUser ? (
-              <label className="login__form-input-label">
-                Create your account
-              </label>
-            ) : (
-              <label className="login__form-input-label">
-                Enter your password
-              </label>
-            )}
+            <label
+              className="login__form-input-label"
+              htmlFor="login__form_password"
+            >
+              {isNewUser ? "Create your account" : "Enter your password"}
+            </label>
             <div className="login__form-input-container">
               <input
                 id="login__form_password"

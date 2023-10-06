@@ -135,16 +135,6 @@
   background-color: #060606;
 }
 
-.site-table .site-table__row {
-  background-color: #060606;
-  border: 3px solid black;
-  box-sizing: border-box;
-}
-
-.site-table .site-table__row:hover {
-  background-color: #0c0c0c;
-}
-
 .site-table th,
 .site-table td {
   border: none;
