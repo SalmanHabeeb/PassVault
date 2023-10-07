@@ -8,7 +8,7 @@ import SettingsPage from "./pages/settings/settings";
 
 import { RootState } from "./state/store";
 
-function App() {
+const App: React.FC = () => {
   let isLoggedIn = useSelector((state: RootState) => state.login.isLoggedIn);
   let settings = useSelector((state: RootState) => state.login.settings);
   if (settings) {
