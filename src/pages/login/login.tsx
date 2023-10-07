@@ -5,7 +5,7 @@ import { useDispatch } from "react-redux";
 import { loginActions } from "../../state/loginSlice";
 
 import { invoke } from "@tauri-apps/api";
-import InvalidPasswordDialog from "../../general/components/invalid-password-dialog/invalid-password-dialog";
+import InvalidPasswordDialog from "../../general/components/message-dialog/message-dialog";
 
 interface PasswordFormElement extends HTMLInputElement {
   password: HTMLInputElement;
@@ -80,7 +80,7 @@ const LoginPage = () => {
   };
 
   const handleInvalidPassword = () => {
-    const dialogElement = document.getElementById("invalid-password-dialog") as HTMLDialogElement;
+    const dialogElement = document.getElementById("message-dialog") as HTMLDialogElement;
     dialogElement.showModal();
   };
 
@@ -130,7 +130,7 @@ const LoginPage = () => {
   return (
     <div id="Login">
       <div className="login__container">
-        <InvalidPasswordDialog />
+        <InvalidPasswordDialog message="Invalid Password"/>
         <form id="login__form" className="login__form" onSubmit={handleSubmit}>
           <div className="login__form-input-wrapper">
             <label

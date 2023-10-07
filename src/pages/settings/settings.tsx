@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 
 import { loginActions } from "../../state/loginSlice";
 import { invoke } from "@tauri-apps/api";
+import InvalidPasswordDialog from "../../general/components/message-dialog/message-dialog";
 
 interface PasswordFormElement extends HTMLInputElement {
   password: HTMLInputElement;
@@ -30,6 +31,8 @@ const SettingsPage = () => {
   const [showAuthPassword, setShowAuthPassword] = useState(false);
   const prevOp = useRef<Function | null>(null);
   const [prevOpArgs, setPrevOpArgs] = useState<any[]>([]);
+
+  const [dialogMessage, setDialogMessage] = useState<string>("");
 
   const handleBackClick = () => {
     dispatch(loginActions.setSettings(false));
@@ -217,7 +220,8 @@ const SettingsPage = () => {
   };
 
   const handleInvalidPassword = () => {
-    (document.getElementById("invalid-password-dialog") as HTMLDialogElement).showModal();
+    setDialogMessage("Invalid Password");
+    (document.getElementById("message-dialog") as HTMLDialogElement).showModal();
   };
 
   const executeFunc = async (func: Function | null, args: any[]) => {
@@ -286,12 +290,7 @@ const SettingsPage = () => {
 
   return (
     <div id="Settings">
-      <dialog id="invalid-password-dialog" className="invalid-password-dialog">
-        <p>Invalid password</p>
-        <form method="dialog">
-          <button className="invalid-password-dialog__form-button" type="submit">Ok</button>
-        </form>
-      </dialog>
+      <InvalidPasswordDialog message={dialogMessage} />
       <dialog id="auth-dialog" className="auth-dialog">
         <form
           id="auth-dialog__form"

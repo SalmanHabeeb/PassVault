@@ -1,5 +1,5 @@
 /* Style the dialog */
-.invalid-password-dialog {
+.message-dialog {
   width: 300px;
   padding: 20px;
   border: 1px solid #ccc;
@@ -10,23 +10,23 @@
 }
 
 /* Style the dialog content */
-.invalid-password-dialog p {
+.message-dialog p {
   font-size: 18px;
   margin-bottom: 15px;
 }
 
-.invalid-password-dialog__form {
+.message-dialog__form {
   width: 80%;
 }
 
 /* Style the input fields */
-.invalid-password-dialog__input {
+.message-dialog__input {
   width: 100%;
   padding: 10px;
   margin-bottom: 10px;
 }
 
-.invalid-password-dialog__form-button-container {
+.message-dialog__form-button-container {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -34,7 +34,7 @@
 }
 
 /* Style the OK button */
-.invalid-password-dialog__form-button {
+.message-dialog__form-button {
   background-color: orange;
   color: white;
   border: none;
@@ -44,6 +44,6 @@
   cursor: pointer;
 }
 
-.invalid-password-dialog__form-button:hover {
+.message-dialog__form-button:hover {
   background-color: #ff8000; /* Darker orange on hover */
 }

@@ -16,7 +16,7 @@ const AuthDialog: React.FC<Props> = ({ handleCloseDialog }) => {
   const [showAuthPassword, setShowAuthPassword] = useState(false);
 
   const handleInvalidPassword = () => {
-    const element = document.getElementById("invalid-password-dialog") as HTMLDialogElement;
+    const element = document.getElementById("message-dialog") as HTMLDialogElement;
     element.showModal();
   };
 

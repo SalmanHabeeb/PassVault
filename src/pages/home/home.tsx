@@ -7,7 +7,7 @@ import { loginActions } from "../../state/loginSlice";
 import { invoke } from "@tauri-apps/api";
 
 import AuthDialog from "./components/auth/auth";
-import InvalidPasswordDialog from "../../general/components/invalid-password-dialog/invalid-password-dialog";
+import InvalidPasswordDialog from "../../general/components/message-dialog/message-dialog";
 import EditDialog from "./components/edit-dialog/edit-dialog";
 import DeleteDialog from "./components/delete-dialog/delete-dialog";
 import CreateDialog from "./components/create-dialog/create-dialog";
@@ -410,7 +410,7 @@ const HomePage = () => {
           siteObjects[toEditIndex] ? siteObjects[toEditIndex].username : null
         }
       />
-      <InvalidPasswordDialog />
+      <InvalidPasswordDialog message="Invalid Password"/>
       <DeleteDialog
         handleCloseDialog={handleCloseDeleteDialog}
         toDeleteSite={
