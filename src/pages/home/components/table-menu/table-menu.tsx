@@ -4,15 +4,15 @@ import "./table-menu.css";
 import * as utils from "../../../../general/utils";
 
 type Props = {
-  time: number,
-  handleClickAdder: (event: any) => void,
-  handleClickLock: (event: any) => void,
-  handleClickUnLock: (event: any) => void,
-  handleClickExit: (event: any) => void,
-  handleClickSettings: (event: React.MouseEvent) => void,
-}
+  time: number;
+  handleClickAdder: (event: any) => void;
+  handleClickLock: (event: any) => void;
+  handleClickUnLock: (event: any) => void;
+  handleClickExit: (event: any) => void;
+  handleClickSettings: (event: React.MouseEvent) => void;
+};
 
-const TableMenu: React.FC<Props>  = ({
+const TableMenu: React.FC<Props> = ({
   time,
   handleClickAdder,
   handleClickLock,
@@ -39,17 +39,19 @@ const TableMenu: React.FC<Props>  = ({
           <div className="arrow"></div>
         </div>
       </div>
-      <div className="table-header-button-container">
+      <div
+        className="table-header-button-container"
+        onMouseOver={() => {
+          utils.toolTipUtils.showHelp("help-lock");
+        }}
+        onMouseOut={() => {
+          utils.toolTipUtils.hideHelp("help-lock");
+        }}
+      >
         <button
           id="table-header-button-lock-passwords"
           className="table-header-button-lock-passwords"
           onClick={time === 0 ? handleClickUnLock : handleClickLock}
-          onMouseOver={() => {
-            utils.toolTipUtils.showHelp("help-lock");
-          }}
-          onMouseOut={() => {
-            utils.toolTipUtils.hideHelp("help-lock");
-          }}
         >
           <i className="material-icons">
             {time === 0 ? "lock_open" : "lock_clock"}
@@ -61,17 +63,19 @@ const TableMenu: React.FC<Props>  = ({
           <div className="arrow"></div>
         </div>
       </div>
-      <div className="table-header-button-container">
+      <div
+        className="table-header-button-container"
+        onMouseOver={() => {
+          utils.toolTipUtils.showHelp("help-lock-app");
+        }}
+        onMouseOut={() => {
+          utils.toolTipUtils.hideHelp("help-lock-app");
+        }}
+      >
         <button
           id="table-header-button-lock-app"
           className="table-header-button"
           onClick={handleClickExit}
-          onMouseOver={() => {
-            utils.toolTipUtils.showHelp("help-lock-app");
-          }}
-          onMouseOut={() => {
-            utils.toolTipUtils.hideHelp("help-lock-app");
-          }}
         >
           <i className="material-icons">exit_to_app</i>
         </button>
@@ -80,17 +84,19 @@ const TableMenu: React.FC<Props>  = ({
           <div className="arrow"></div>
         </div>
       </div>
-      <div className="table-header-button-container">
+      <div
+        className="table-header-button-container"
+        onMouseOver={() => {
+          utils.toolTipUtils.showHelp("help-settings-app");
+        }}
+        onMouseOut={() => {
+          utils.toolTipUtils.hideHelp("help-settings-app");
+        }}
+      >
         <button
           id="table-header-button-settings"
           className="table-header-button"
           onClick={handleClickSettings}
-          onMouseOver={() => {
-            utils.toolTipUtils.showHelp("help-settings-app");
-          }}
-          onMouseOut={() => {
-            utils.toolTipUtils.hideHelp("help-settings-app");
-          }}
         >
           <i className="material-icons">settings</i>
         </button>
@@ -101,6 +107,6 @@ const TableMenu: React.FC<Props>  = ({
       </div>
     </div>
   );
-}
+};
 
 export default TableMenu;
