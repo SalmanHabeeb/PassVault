@@ -1,72 +1,31 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use serde_json::json;
-use serde::Serialize;
 use serde::Deserialize;
+use serde::Serialize;
 use sqlx::prelude::*;
 
 // Import sqlx::sqlite::SqlitePool and sqlx::types::Json
-use sqlx::types::Json;
-use serde_json::from_value;
-use sqlx::sqlite::{SqliteConnection, SqliteConnectOptions};
+use sqlx::sqlite::{SqliteConnectOptions, SqliteConnection};
 
 use std::fs;
 use std::fs::File;
 use std::io::Read;
-use std::io::{Write};
+use std::io::Write;
 
 extern crate bcrypt;
 
 use bcrypt::{hash, verify, DEFAULT_COST};
 
-use aes::Aes128;
-use aes::cipher::{
-    BlockCipher, BlockEncrypt, BlockDecrypt, KeyInit,
-    generic_array::GenericArray,
-};
 use aes::cipher::{block_padding::Pkcs7, BlockDecryptMut, BlockEncryptMut, KeyIvInit};
-use hex::{encode, decode};
-use hex_literal::hex;
 
 type Aes128CbcEnc = cbc::Encryptor<aes::Aes128>;
 type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
 
-// use block_modes::{BlockMode, Cbc};
-// use block_modes::block_padding::NoPadding;
-
-use argon2::{
-    password_hash::{
-        PasswordHash, PasswordHasher, PasswordVerifier, SaltString
-    },
-    Argon2
-};
+use argon2::Argon2;
 
 extern crate rand;
-use rand::{Rng, thread_rng, rngs::OsRng, RngCore, SeedableRng};
-use rand_chacha::ChaChaRng;
-
-// extern crate aes;
-// extern crate pbkdf2;
-// extern crate rand;
-
-// use aes::Aes128;
-// use aes::cipher::generic_array::GenericArray;
-// use aes::cipher::BlockCipher;
-// use aes::cipher::block_cipher_modes;
-// use pbkdf2::{
-//     password_hash::{
-//         rand_core::OsRng,
-//         PasswordHash, PasswordHasher, PasswordVerifier, SaltString
-//     },
-//     Pbkdf2
-// };
-// use pbkdf2::pbkdf2;
-// use rand::Rng;
-// use std::str;
-// use sha2::Sha256;
-
-// type AesCbc = block_cipher_modes::Cbc<Aes128>;
+use rand::{rngs::OsRng, RngCore};
 
 // Define a struct for the entry data
 #[derive(sqlx::FromRow, Serialize, Deserialize)]
@@ -99,9 +58,7 @@ use chrono::prelude::*;
 use lazy_static::lazy_static;
 
 struct AuthState {
-    master_password: Option<String>,
     master_password_hash: Option<String>,
-    k2k: Option<String>,
     encryption_key: Option<Vec<u8>>,
     encryption_key_enc: Option<[u8; 32]>,
     time_of_entry: DateTime<Utc>,
@@ -119,11 +76,9 @@ impl AuthState {
         let auth = false;
         let salt = None;
         AuthState {
-            master_password: None,
             master_password_hash: None,
-            k2k: None,
-            encryption_key:None,
-            encryption_key_enc:None,
+            encryption_key: None,
+            encryption_key_enc: None,
             time_of_entry,
             unlock_time: 60,
             salt,
@@ -139,30 +94,27 @@ impl AuthState {
         // Write master_password_hash to the file
         if let Some(ref hash) = self.master_password_hash {
             writeln!(file, "master_password_hash: {}", hash).map_err(|e| {
-                    e.to_string() // Convert the error to a string using to_string
-                }
-            )?;
+                e.to_string() // Convert the error to a string using to_string
+            })?;
         }
 
         // Write encryption_key_enc to the file
         if let Some(enc_key) = self.encryption_key_enc {
             let enc_key_hex = hex::encode(enc_key);
             writeln!(file, "encryption_key_enc: {}", enc_key_hex).map_err(|e| {
-            e.to_string() // Convert the error to a string using to_string
-        })?;
+                e.to_string() // Convert the error to a string using to_string
+            })?;
         }
 
         if let Some(ref salt) = self.salt {
             writeln!(file, "salt: {}", salt).map_err(|e| {
-                    e.to_string() // Convert the error to a string using to_string
-                }
-            )?;
+                e.to_string() // Convert the error to a string using to_string
+            })?;
         }
 
         writeln!(file, "unlock_time: {}", self.unlock_time).map_err(|e| {
-                e.to_string() // Convert the error to a string using to_string
-            }
-        )?;
+            e.to_string() // Convert the error to a string using to_string
+        })?;
 
         Ok(())
     }
@@ -176,32 +128,54 @@ impl AuthState {
         self.encryption_key = Some(enckey.to_vec());
         let iv = [0x24; 16];
         let mut output_key_material = [0x42; 16]; // Can be any desired size
-        let salt: String = std::iter::repeat_with(fastrand::alphanumeric).take(16).collect();
+        let salt: String = std::iter::repeat_with(fastrand::alphanumeric)
+            .take(16)
+            .collect();
         self.salt = Some(salt);
-        Argon2::default().hash_password_into(master_password.as_bytes(), self.salt.clone().unwrap().as_bytes(), &mut output_key_material).map_err(|e| e.to_string())?;
-        let mut key = output_key_material;
+        Argon2::default()
+            .hash_password_into(
+                master_password.as_bytes(),
+                self.salt.clone().unwrap().as_bytes(),
+                &mut output_key_material,
+            )
+            .map_err(|e| e.to_string())?;
+        let key = output_key_material;
         let mut buf = [0u8; 48];
         let ct = Aes128CbcEnc::new(&key.into(), &iv.into())
-                    .encrypt_padded_b2b_mut::<Pkcs7>(&enckey, &mut buf)
-                    .unwrap();
+            .encrypt_padded_b2b_mut::<Pkcs7>(&enckey, &mut buf)
+            .unwrap();
         self.encryption_key_enc = Some(ct[0..32].try_into().unwrap());
         Ok(())
     }
 
-    fn set_new_password(&mut self, current_password: String, new_password: String) -> Result<bool, String> {
+    fn set_new_password(
+        &mut self,
+        current_password: String,
+        new_password: String,
+    ) -> Result<bool, String> {
         let iv = [0x24; 16];
         let mut key = [0x42; 16]; // Can be any desired size
-        let salt: String = std::iter::repeat_with(fastrand::alphanumeric).take(16).collect();
+        let salt: String = std::iter::repeat_with(fastrand::alphanumeric)
+            .take(16)
+            .collect();
         self.salt = Some(salt);
-        Argon2::default().hash_password_into(new_password.as_bytes(), self.salt.clone().unwrap().as_bytes(), &mut key).map_err(|e| e.to_string())?;
+        Argon2::default()
+            .hash_password_into(
+                new_password.as_bytes(),
+                self.salt.clone().unwrap().as_bytes(),
+                &mut key,
+            )
+            .map_err(|e| e.to_string())?;
         let mut buf = [0u8; 48];
         let ciphertext = Aes128CbcEnc::new(&key.into(), &iv.into())
-                    .encrypt_padded_b2b_mut::<Pkcs7>(&self.encryption_key.clone().unwrap().as_slice(), &mut buf)
-                    .unwrap();
+            .encrypt_padded_b2b_mut::<Pkcs7>(
+                &self.encryption_key.clone().unwrap().as_slice(),
+                &mut buf,
+            )
+            .unwrap();
         self.encryption_key_enc = Some(ciphertext[0..32].try_into().unwrap());
         Ok(true)
     }
-    
 
     fn load_from_file(&mut self, file_path: &str) -> Result<bool, String> {
         let mut file = File::open(file_path).map_err(|e| {
@@ -219,7 +193,10 @@ impl AuthState {
         for line in contents.lines() {
             if line.starts_with("master_password_hash: ") {
                 counter += 1;
-                self.master_password_hash = Some(line.trim_start_matches("master_password_hash: ").to_string());
+                self.master_password_hash = Some(
+                    line.trim_start_matches("master_password_hash: ")
+                        .to_string(),
+                );
             } else if line.starts_with("encryption_key_enc: ") {
                 let mut key_enc_str = line.trim_start_matches("encryption_key_enc: ").to_string();
                 key_enc_str.retain(|c| c != ' '); // Remove spaces
@@ -228,10 +205,10 @@ impl AuthState {
                     e.to_string() // Convert the error to a string using to_string
                 })?;
                 self.encryption_key_enc = Some(key_enc);
-                counter+=1;
+                counter += 1;
             } else if line.starts_with("salt: ") {
                 self.salt = Some(line.trim_start_matches("salt: ").to_string());
-                counter+=1;
+                counter += 1;
             } else if line.starts_with("unlock_time: ") {
                 // Not necessary to add counter, since not a required field
                 self.unlock_time = match line.trim_start_matches("unlock_time: ").parse::<i64>() {
@@ -258,9 +235,14 @@ impl AuthState {
     }
 
     fn set_encryption_key(&mut self, password: String) -> Result<(), String> {
-        let mut rng = thread_rng();
         let mut key = [0x42; 16]; // Can be any desired size
-        Argon2::default().hash_password_into(password.as_bytes(), self.salt.clone().unwrap().as_bytes(), &mut key).map_err(|e| e.to_string())?;
+        Argon2::default()
+            .hash_password_into(
+                password.as_bytes(),
+                self.salt.clone().unwrap().as_bytes(),
+                &mut key,
+            )
+            .map_err(|e| e.to_string())?;
         let iv = [0x24; 16];
 
         let mut buf = [0u8; 48];
@@ -278,7 +260,6 @@ impl AuthState {
         self.unlock_time = unlock_time;
     }
 
-
     fn get_encryption_key(&mut self) -> Vec<u8> {
         self.encryption_key.clone().unwrap_or_default()
     }
@@ -289,11 +270,11 @@ impl AuthState {
         }
         let current_time = Utc::now();
         let time_difference = current_time.signed_duration_since(self.time_of_entry);
-        let duration = self.unlock_time-time_difference.num_seconds();
+        let duration = self.unlock_time - time_difference.num_seconds();
         if duration <= 0 {
             self.set_auth(false);
             return 0;
-        } 
+        }
         return duration;
     }
 
@@ -301,7 +282,7 @@ impl AuthState {
         return self.unlock_time;
     }
 
-    fn get_master_password_hash(&mut self)  -> Option<String> {
+    fn get_master_password_hash(&mut self) -> Option<String> {
         return self.master_password_hash.clone();
     }
 
@@ -330,29 +311,6 @@ impl AuthState {
             self.encryption_key = None;
             return false;
         }
-    }
-}
-
-struct DataBase {
-    conn: Option<SqliteConnection>,
-}
-
-impl DataBase {
-    fn new() -> Self {
-        DataBase { conn: None }
-    }
-    async fn connect(&mut self) -> Result<(), String> {
-        if self.conn.is_none() {
-            let filename = "./passvault.db";
-            let mut options = SqliteConnectOptions::new()
-                .filename(filename);
-
-            let conn = SqliteConnection::connect_with(&options).await.map_err(|e| e.to_string())?;
-
-            self.conn = Some(conn);
-        }
-
-        Ok(())
     }
 }
 
@@ -433,7 +391,11 @@ struct GetPasswordResponse {
 }
 
 #[tauri::command]
-async fn get_password(app_handle: tauri::AppHandle, site: String, username: String) -> Result<GetPasswordResponse, String> {
+async fn get_password(
+    app_handle: tauri::AppHandle,
+    site: String,
+    username: String,
+) -> Result<GetPasswordResponse, String> {
     let authorized = authorize();
     let mut response = GetPasswordResponse {
         success: false,
@@ -453,11 +415,14 @@ async fn get_password(app_handle: tauri::AppHandle, site: String, username: Stri
         let conn: &mut SqliteConnection = &mut conn_value;
 
         // Use a different variable name for the query result
-        let query_result = sqlx::query_as::<_, PasswordEntry>("SELECT * FROM password_database WHERE site = ? AND username = ?")
-            .bind(site) // Bind the site value
-            .bind(username) // Bind the username value
-            .fetch_one(conn) // Fetch only one entry
-            .await.map_err(|e| e.to_string());
+        let query_result = sqlx::query_as::<_, PasswordEntry>(
+            "SELECT * FROM password_database WHERE site = ? AND username = ?",
+        )
+        .bind(site) // Bind the site value
+        .bind(username) // Bind the username value
+        .fetch_one(conn) // Fetch only one entry
+        .await
+        .map_err(|e| e.to_string());
 
         // Unwrap the query result only once and assign it to a variable
         let entry = query_result.unwrap();
@@ -468,20 +433,21 @@ async fn get_password(app_handle: tauri::AppHandle, site: String, username: Stri
         // Use the entry variable to get the password bytes
         let hex_bytes = hex::decode(entry.password).unwrap();
         let bytes: &[u8] = hex_bytes.as_slice();
-        let pt_len = bytes.len();
 
         let salt = entry.salt.as_str().as_bytes();
         let mut key = [0x42; 16];
-        Argon2::default().hash_password_into(enc_key, salt, &mut key).map_err(|e| e.to_string())?;
+        Argon2::default()
+            .hash_password_into(enc_key, salt, &mut key)
+            .map_err(|e| e.to_string())?;
 
         let mut buf = [0u8; 48];
         let pt = Aes128CbcDec::new(&key.into(), &iv.into())
             .decrypt_padded_b2b_mut::<Pkcs7>(&bytes, &mut buf)
             .unwrap();
-        
+
         // Convert the decrypted password to a string
         let s2 = match String::from_utf8(pt.to_vec()) {
-            Ok(s2) => s2, // If successful, return the string
+            Ok(s2) => s2,                             // If successful, return the string
             Err(e) => panic!("Invalid UTF-8: {}", e), // If failed, panic with the error
         };
 
@@ -493,9 +459,12 @@ async fn get_password(app_handle: tauri::AppHandle, site: String, username: Stri
     Ok(response)
 }
 
-
 #[tauri::command]
-async fn delete_entry(app_handle: tauri::AppHandle, site: String, username: String) -> Result<SuccessResponse, String> {
+async fn delete_entry(
+    app_handle: tauri::AppHandle,
+    site: String,
+    username: String,
+) -> Result<SuccessResponse, String> {
     let authorized = authorize();
 
     if authorized {
@@ -531,7 +500,14 @@ async fn delete_entry(app_handle: tauri::AppHandle, site: String, username: Stri
 }
 
 #[tauri::command]
-async fn edit_entry(app_handle: tauri::AppHandle, new_site: String, new_username: String, new_password: String, edit_site: String, edit_username: String) -> Result<SuccessResponse, String> {
+async fn edit_entry(
+    app_handle: tauri::AppHandle,
+    new_site: String,
+    new_username: String,
+    new_password: String,
+    edit_site: String,
+    edit_username: String,
+) -> Result<SuccessResponse, String> {
     let authorized = authorize();
 
     if authorized {
@@ -552,12 +528,15 @@ async fn edit_entry(app_handle: tauri::AppHandle, new_site: String, new_username
             let iv = [0x24; 16];
             let mut buf = [0u8; 48];
             let bytes: &[u8] = new_password.as_bytes();
-            let pt_len = bytes.len();
 
-            let salt: String = std::iter::repeat_with(fastrand::alphanumeric).take(16).collect();
+            let salt: String = std::iter::repeat_with(fastrand::alphanumeric)
+                .take(16)
+                .collect();
             let mut key = [0x42; 16];
-            Argon2::default().hash_password_into(enc_key, &salt.as_str().as_bytes(), &mut key).map_err(|e| e.to_string())?;
-            
+            Argon2::default()
+                .hash_password_into(enc_key, &salt.as_str().as_bytes(), &mut key)
+                .map_err(|e| e.to_string())?;
+
             let ciphertext = Aes128CbcEnc::new(&key.into(), &iv.into())
                 .encrypt_padded_b2b_mut::<Pkcs7>(&bytes, &mut buf)
                 .unwrap();
@@ -595,7 +574,6 @@ async fn edit_entry(app_handle: tauri::AppHandle, new_site: String, new_username
         })
     }
 }
-
 
 fn file_exists(file_path: &str) -> bool {
     if let Ok(metadata) = fs::metadata(file_path) {
@@ -679,21 +657,20 @@ async fn start_app(app_handle: tauri::AppHandle) -> Result<StartAppResponse, Str
 
     // Check if the file exists
     if !file_exists(database_path) {
-        let mut file = File::create(database_path)
-                        .map_err(|e| e.to_string())?;
+        let _file: File = File::create(database_path).map_err(|e| e.to_string())?;
     }
 
     let options = SqliteConnectOptions::new().filename(database_path);
     let mut conn_value: SqliteConnection = SqliteConnection::connect_with(&options)
-                .await
-                .map_err(|e| e.to_string())?;
+        .await
+        .map_err(|e| e.to_string())?;
 
     let conn: &mut SqliteConnection = &mut conn_value;
     sqlx::query("CREATE TABLE PASSWORD_DATABASE('site' VARCHAR(255), 'username' VARCHAR(255), 'password' VARCHAR(255), 'salt' VARCHAR(255), UNIQUE('site','username'))")
             .execute(conn)
             .await
             .map_err(|e| e.to_string()).unwrap_or_default();
-    return Ok(StartAppResponse{
+    return Ok(StartAppResponse {
         success: true,
         is_new_user: is_new_user,
         config_good: config_good,
@@ -701,8 +678,12 @@ async fn start_app(app_handle: tauri::AppHandle) -> Result<StartAppResponse, Str
 }
 
 #[tauri::command]
-fn change_password(app_handle: tauri::AppHandle, current_password: String, new_password: String) -> Result<SuccessResponse, String> {
-    let mut response = SuccessResponse{
+fn change_password(
+    app_handle: tauri::AppHandle,
+    current_password: String,
+    new_password: String,
+) -> Result<SuccessResponse, String> {
+    let mut response = SuccessResponse {
         success: true,
         authorized: true,
     };
@@ -710,9 +691,14 @@ fn change_password(app_handle: tauri::AppHandle, current_password: String, new_p
     let config_path_string = get_config_path(app_handle);
     let config_path: &str = config_path_string.as_str();
 
-    if verify(current_password.clone(), auth_state_ref.get_master_password_hash().unwrap().as_str()).unwrap() {
+    if verify(
+        current_password.clone(),
+        auth_state_ref.get_master_password_hash().unwrap().as_str(),
+    )
+    .unwrap()
+    {
         let hashed_new_password = hash(new_password.clone(), DEFAULT_COST).unwrap();
-        let result = auth_state_ref.set_encryption_key(current_password.clone());
+        let mut _result = auth_state_ref.set_encryption_key(current_password.clone());
         auth_state_ref.set_new_password(current_password, new_password);
         auth_state_ref.set_password_hash(hashed_new_password);
         auth_state_ref.save_to_file(config_path);
@@ -723,7 +709,6 @@ fn change_password(app_handle: tauri::AppHandle, current_password: String, new_p
     Ok(response)
 }
 
-
 #[tauri::command]
 fn get_key() -> Vec<u8> {
     let mut auth_state_ref = AUTH_STATE.lock().unwrap();
@@ -731,7 +716,10 @@ fn get_key() -> Vec<u8> {
 }
 
 #[tauri::command]
-async fn authenticate(app_handle: tauri::AppHandle, master_password: String) -> Result<bool, String> {
+async fn authenticate(
+    app_handle: tauri::AppHandle,
+    master_password: String,
+) -> Result<bool, String> {
     // Open the file for reading
     let mut auth_state_ref = AUTH_STATE.lock().unwrap();
 
@@ -739,8 +727,13 @@ async fn authenticate(app_handle: tauri::AppHandle, master_password: String) -> 
     let filepath: &str = filepath_string.as_str();
     if file_exists(filepath) {
         let success_loading = auth_state_ref.load_from_file(filepath);
-        if (success_loading.unwrap())  {
-            if verify(master_password.clone(), auth_state_ref.get_master_password_hash().unwrap().as_str()).unwrap() {
+        if (success_loading.unwrap()) {
+            if verify(
+                master_password.clone(),
+                auth_state_ref.get_master_password_hash().unwrap().as_str(),
+            )
+            .unwrap()
+            {
                 let result = auth_state_ref.set_encryption_key(master_password);
                 Ok(true)
             } else {
@@ -750,7 +743,6 @@ async fn authenticate(app_handle: tauri::AppHandle, master_password: String) -> 
             Ok(false)
         }
     } else {
-
         let hashed_password = hash(master_password.clone(), DEFAULT_COST).unwrap();
 
         // Create or open the file for writing
@@ -760,23 +752,25 @@ async fn authenticate(app_handle: tauri::AppHandle, master_password: String) -> 
 
         auth_state_ref.set_new_key(master_password);
         auth_state_ref.set_password_hash(hashed_password);
-        println!("{}", auth_state_ref.get_master_password_hash().unwrap().as_str());
+        println!(
+            "{}",
+            auth_state_ref.get_master_password_hash().unwrap().as_str()
+        );
         auth_state_ref.save_to_file(filepath);
         auth_state_ref.load_from_file(filepath);
         auth_state_ref.set_auth(true);
 
-        // Write the data to the file
-        // file.write_all(bytes).map_err(|e| {
-        //     e.to_string() // Convert the error to a string using to_string
-        // })?;
         Ok(true)
     }
 }
 
-use typenum::U16;
-
 #[tauri::command]
-async fn write_entry(app_handle: tauri::AppHandle, site: String, username: String, password: String) -> Result<SuccessResponse, String> {
+async fn write_entry(
+    app_handle: tauri::AppHandle,
+    site: String,
+    username: String,
+    password: String,
+) -> Result<SuccessResponse, String> {
     let authorized = authorize();
 
     if authorized {
@@ -796,12 +790,15 @@ async fn write_entry(app_handle: tauri::AppHandle, site: String, username: Strin
         let iv = [0x24; 16];
         let mut buf = [0u8; 48];
         let bytes: &[u8] = password.as_bytes();
-        let pt_len = bytes.len();
 
-        let salt: String = std::iter::repeat_with(fastrand::alphanumeric).take(16).collect();
+        let salt: String = std::iter::repeat_with(fastrand::alphanumeric)
+            .take(16)
+            .collect();
         let mut key = [0x42; 16];
-        Argon2::default().hash_password_into(enc_key, &salt.as_str().as_bytes(), &mut key).map_err(|e| e.to_string())?;
-        
+        Argon2::default()
+            .hash_password_into(enc_key, &salt.as_str().as_bytes(), &mut key)
+            .map_err(|e| e.to_string())?;
+
         let ciphertext = Aes128CbcEnc::new(&key.into(), &iv.into())
             .encrypt_padded_b2b_mut::<Pkcs7>(&bytes, &mut buf)
             .unwrap();
@@ -870,106 +867,6 @@ struct GreetResponse {
     encryptionkey: Vec<u8>,
 }
 
-use std::env;
-#[tauri::command]
-async fn greet(name: &str) -> Result<GreetResponse, String> {
-    let password = b"google"; // Bad password; don't actually use!
-    let salt = b"example salt"; // Salt should be unique per password
-    let mut rng = thread_rng();
-    let enckey: [u8; 16] = rng.gen();
-
-    let mut output_key_material = [0x42; 16]; // Can be any desired size
-    Argon2::default().hash_password_into(password, salt, &mut output_key_material).map_err(|e| e.to_string())?;
-    let mut key = output_key_material;
-let iv = [0x24; 16];
-let plaintext = *b"he";
-
-// encrypt/decrypt in-place
-// buffer must be big enough for padded plaintext
-let mut buf = [0u8; 48];
-let pt_len = 16;
-buf[..pt_len].copy_from_slice(&enckey);
-
-// encrypt/decrypt from buffer to buffer
-let mut buf = [0u8; 48];
-let ct = Aes128CbcEnc::new(&key.into(), &iv.into())
-    .encrypt_padded_b2b_mut::<Pkcs7>(&enckey, &mut buf)
-    .unwrap();
-
-let mut buf = [0u8; 48];
-let pt = Aes128CbcDec::new(&key.into(), &iv.into())
-    .decrypt_padded_b2b_mut::<Pkcs7>(&ct, &mut buf)
-    .unwrap();
-// let s2 = match String::from_utf8(ct.to_vec()) {
-//     Ok(s2) => s2, // If successful, return the string
-//     Err(e) => panic!("Invalid UTF-8: {}", e), // If failed, panic with the error
-// };
-// assert_eq!(pt, &enckey);
-print!("Yes, {:?}", ct);
-    // Convert a string into a byte array
-    let mut auth_state_ref = AUTH_STATE.lock().unwrap();
-
-    // let password = b"hunter42"; // Bad password; don't actually use!
-    // let salt = b"example salt"; // Salt should be unique per password
-
-    let mut output_key_material = [0u8; 16]; // Can be any desired size
-    Argon2::default().hash_password_into(password, salt, &mut output_key_material).map_err(|e| e.to_string())?;
-    let s = "This is a sec";
-    let mut bytes = s.as_bytes().to_vec();
-
-    // Pad the byte array with zeros if needed
-    let padding = 16 - (bytes.len() % 16);
-    bytes.extend(vec![0u8; padding]);
-
-    // Wrap the byte array in a GenericArray
-    let mut block = GenericArray::clone_from_slice(&bytes);
-
-    // // Convert another string into a byte array for the key
-    // let k = "This is a secret"; // A string of 16 characters
-    // let key_bytes = k.as_bytes().to_vec();
-
-    // // Wrap the key byte array in a GenericArray
-    let key = GenericArray::clone_from_slice(&output_key_material);
-
-    let cipher = Aes128::new(&key);
-
-    // Encrypt and decrypt the block as before
-    let block_copy = block.clone();
-    cipher.encrypt_block(&mut block);
-    cipher.decrypt_block(&mut block);
-
-    // let hashed_password = hash(auth_state_ref.get_master_password().unwrap_or("".to_string()), DEFAULT_COST).unwrap();
-    
-
-    // Convert the block into a byte array
-    let bytes = block.to_vec();
-
-    // Convert the byte array into a string
-    let s1 = match String::from_utf8(bytes) {
-        Ok(s1) => s1, // If successful, return the string
-        Err(e) => panic!("Invalid UTF-8: {}", e), // If failed, panic with the error
-    };
-
-    // Print the string
-    // println!("String: {}", s);
-
-    let demo_key = auth_state_ref.get_encryption_key();
-    match env::current_dir() {
-        Ok(path) => {
-            // Convert the PathBuf to a String using the to_string_lossy method.
-            Ok(GreetResponse {
-                hash: ct.to_vec(),
-                encryptionkey: enckey.to_vec(),
-            })
-        }
-        Err(e) => {
-            // Return an error message as a String.
-            Err(format!("Error: {}", e))
-        }
-    }
-}
-
-
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -984,7 +881,20 @@ fn main() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet, get_entries, write_entry, delete_entry, edit_entry, get_password, authenticate, authorize, check_time, change_unlock_time,change_password, start_app, lock_app])
+        .invoke_handler(tauri::generate_handler![
+            get_entries,
+            write_entry,
+            delete_entry,
+            edit_entry,
+            get_password,
+            authenticate,
+            authorize,
+            check_time,
+            change_unlock_time,
+            change_password,
+            start_app,
+            lock_app
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
