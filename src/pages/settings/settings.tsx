@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, ChangeEvent } from "react";
-import "./settings.css";
+import "./settings-1.css";
 import { useDispatch } from "react-redux";
 
 import { loginActions } from "../../state/loginSlice";
@@ -211,7 +211,9 @@ const SettingsPage = () => {
   };
 
   const handleChangePasswordCancel = () => {
-    const element = document.getElementById("change-password-form") as PasswordFormElement;
+    const element = document.getElementById(
+      "change-password-form"
+    ) as PasswordFormElement;
     element.currentPassword.value = "";
     element.newPassword.value = "";
     setShowChangePassword(false);
@@ -221,7 +223,9 @@ const SettingsPage = () => {
 
   const handleInvalidPassword = () => {
     setDialogMessage("Invalid Password");
-    (document.getElementById("message-dialog") as HTMLDialogElement).showModal();
+    (
+      document.getElementById("message-dialog") as HTMLDialogElement
+    ).showModal();
   };
 
   const executeFunc = async (func: Function | null, args: any[]) => {
@@ -261,9 +265,13 @@ const SettingsPage = () => {
     console.log(prevOp);
     await executeFunc(prevOp.current, prevOpArgs);
   };
-  const handleToggleShowAuthPassword = (event: React.MouseEvent<HTMLElement, MouseEvent>) => {
+  const handleToggleShowAuthPassword = (
+    event: React.MouseEvent<HTMLElement, MouseEvent>
+  ) => {
     setShowAuthPassword(!showAuthPassword);
-    const inputElement = (document.getElementById("auth-dialog__form") as PasswordFormElement).password;
+    const inputElement = (
+      document.getElementById("auth-dialog__form") as PasswordFormElement
+    ).password;
     const inputValue = inputElement.value;
     inputElement.focus();
     inputElement.value = "";
@@ -272,7 +280,9 @@ const SettingsPage = () => {
     }, 0);
   };
   const handleCancelAuthFlow = () => {
-    (document.getElementById("auth-dialog__form") as PasswordFormElement).password.value = "";
+    (
+      document.getElementById("auth-dialog__form") as PasswordFormElement
+    ).password.value = "";
     setShowAuthPassword(false);
     (document.getElementById("auth-dialog") as HTMLDialogElement).close();
   };
@@ -375,9 +385,7 @@ const SettingsPage = () => {
                       <span className="change-password-form__eye-icon">
                         <i
                           className="material-icons"
-                          onClick={(event) =>
-                            handleToggleShowCurrentPassword()
-                          }
+                          onClick={(event) => handleToggleShowCurrentPassword()}
                           style={{
                             cursor: "pointer",
                           }}
@@ -401,9 +409,7 @@ const SettingsPage = () => {
                       <span className="change-password-form__eye-icon">
                         <i
                           className="material-icons"
-                          onClick={(event) =>
-                            handleToggleShowNewPassword()
-                          }
+                          onClick={(event) => handleToggleShowNewPassword()}
                           style={{
                             cursor: "pointer",
                           }}

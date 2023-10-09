@@ -1,5 +1,5 @@
 import React from "react";
-import "./table-menu.css";
+import "./table-menu-1.css";
 
 import * as utils from "../../../../general/utils";
 

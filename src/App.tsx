@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import "./App.css";
 import { useSelector } from "react-redux";
 
-import HomePage from "./pages/home/home";
-import LoginPage from "./pages/login/login";
+import HomePage from "./pages/home/home1";
+import LoginPage from "./pages/login/login1";
 import SettingsPage from "./pages/settings/settings";
 
 import { RootState } from "./state/store";

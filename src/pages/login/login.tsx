@@ -27,7 +27,9 @@ const LoginPage = () => {
 
   const handleToggleShowPassword = () => {
     setShowPassword(!showPassword);
-    const inputElement = document.getElementById("login__form_password") as HTMLInputElement;
+    const inputElement = document.getElementById(
+      "login__form_password"
+    ) as HTMLInputElement;
     inputElement.focus();
     const inputValue = inputElement.value;
     inputElement.focus();
@@ -40,7 +42,9 @@ const LoginPage = () => {
   const handleOutsideClick = (event: MouseEvent) => {
     if (
       generateRandomPasswordRef.current &&
-      !(generateRandomPasswordRef.current as HTMLElement).contains(event.target as HTMLElement)
+      !(generateRandomPasswordRef.current as HTMLElement).contains(
+        event.target as HTMLElement
+      )
     ) {
       setShowGeneratePassword(false);
     }
@@ -74,13 +78,17 @@ const LoginPage = () => {
 
   const handleClickGeneratePassword = (password: string) => {
     console.log(document.getElementById("login__form"));
-    const formElement = document.getElementById("login__form") as PasswordFormElement;
+    const formElement = document.getElementById(
+      "login__form"
+    ) as PasswordFormElement;
     formElement.password.value = password;
     setShowGeneratePassword(false);
   };
 
   const handleInvalidPassword = () => {
-    const dialogElement = document.getElementById("message-dialog") as HTMLDialogElement;
+    const dialogElement = document.getElementById(
+      "message-dialog"
+    ) as HTMLDialogElement;
     dialogElement.showModal();
   };
 
@@ -130,7 +138,7 @@ const LoginPage = () => {
   return (
     <div id="Login">
       <div className="login__container">
-        <InvalidPasswordDialog message="Invalid Password"/>
+        <InvalidPasswordDialog message="Invalid Password" />
         <form id="login__form" className="login__form" onSubmit={handleSubmit}>
           <div className="login__form-input-wrapper">
             <label
@@ -156,8 +164,11 @@ const LoginPage = () => {
                         setShowGeneratePassword(true);
                       }
                     }
-                    if(generateRandomPasswordRef.current) {
-                    (generateRandomPasswordRef.current as HTMLInputElement).focus();}
+                    if (generateRandomPasswordRef.current) {
+                      (
+                        generateRandomPasswordRef.current as HTMLInputElement
+                      ).focus();
+                    }
                   }
                 }}
                 autoFocus
@@ -178,7 +189,9 @@ const LoginPage = () => {
                 tabIndex={0}
                 onClick={() => handleClickGeneratePassword(safePassword)}
                 onKeyDown={(e) => {
-                  const formElement = document.getElementById("login__form") as PasswordFormElement;
+                  const formElement = document.getElementById(
+                    "login__form"
+                  ) as PasswordFormElement;
                   if (e.key === "Enter") {
                     handleClickGeneratePassword(safePassword);
                   }

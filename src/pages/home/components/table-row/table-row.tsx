@@ -1,10 +1,10 @@
 import React from "react";
-import "./table-row.css";
+import "./table-row-1.css";
 
 interface SiteObject extends Object {
-  site: string,
-  username: string,
-  password: string,
+  site: string;
+  username: string;
+  password: string;
 }
 
 type Props = {
@@ -16,7 +16,7 @@ type Props = {
   onCopyClick: (index: number) => void;
   onDeleteClick: (index: number) => void;
   onEditClick: (index: number) => void;
-}
+};
 
 const TableRow: React.FC<Props> = ({
   index,
@@ -84,6 +84,6 @@ const TableRow: React.FC<Props> = ({
       </td>
     </tr>
   ) : null;
-}
+};
 
 export default TableRow;
