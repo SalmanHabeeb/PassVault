@@ -1,0 +1,243 @@
+.settings__container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: #1900ff;
+}
+
+.settings__title {
+  display: flex;
+  width: 80%;
+
+  color: #1900ff;
+  font-style: normal;
+  font-weight: bolder;
+  font-size: 3rem;
+  user-select: none;
+}
+
+.settings__back-container {
+  width: 80%;
+
+  color: #1900ff;
+  font-style: normal;
+  font-weight: bolder;
+  font-size: 3rem;
+  user-select: none;
+}
+
+.settings__back-container .material-icons {
+  cursor: pointer;
+}
+
+.settings__menu {
+  width: 80%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: baseline;
+  background-color: white;
+}
+
+.settings__section {
+  width: 100%;
+}
+
+.settings__section-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.settings__section-heading {
+  color: #1900ff;
+  font-style: normal;
+  font-weight: bolder;
+  font-size: 1.3rem;
+  user-select: none;
+  margin: 10px;
+}
+
+.settings__section-down-arrow {
+  color: #1900ff;
+  font-style: normal;
+  font-weight: bolder;
+  font-size: 2rem;
+  user-select: none;
+  cursor: pointer;
+  margin: 10px;
+}
+
+.settings__section-expansion {
+  width: 100%;
+}
+
+.change-password-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 0px 10px;
+}
+
+.change-password-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.change-password-form__input-container {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.change-password-form__input-label {
+  margin: 5px;
+}
+
+.change-password-form__eye-icon {
+  position: absolute;
+  top: 55%;
+  right: 3%;
+  color: blue;
+}
+
+.change-password-form__button-container {
+  width: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  margin: 10px;
+}
+
+.change-password-form__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #1900ff;
+  color: black;
+  border: none;
+  width: 80px;
+  height: 30px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.change-password-form__button:hover {
+  background-color: #f76b8a; /* Darker orange on hover */
+}
+
+.settings__section-time-input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.settings__section-time-nested-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.settings__section-time-input-label {
+  display: block;
+  margin: 0px 30px;
+}
+
+.settings__section-time-input {
+  width: 20px;
+  height: 10px;
+  padding: 20px 20px 20px 5px;
+  border: none;
+  border-radius: 5px;
+  background-color: #ccc;
+  color: #0f0f0f;
+  font-size: 16px;
+}
+
+.settings__section-time-input::-webkit-inner-spin-button,
+.settings__section-time-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.settings__section-time-input::-webkit-input-placeholder {
+  color: #aaa;
+}
+
+.settings__section-time-input:-moz-placeholder {
+  color: #aaa;
+}
+
+.settings__section-time-input::-moz-placeholder {
+  color: #aaa;
+}
+
+.settings__section-time-input:-ms-input-placeholder {
+  color: #aaa;
+}
+
+.settings__section-time-input:focus {
+  outline: none;
+}
+
+.settings__section-time-input-set {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  margin: 10px;
+}
+
+.settings__section-time-input-set-buttons {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  height: 25px;
+  border-style: groove;
+  background-color: white;
+  border-radius: 5px;
+  border-style: none;
+  box-sizing: border-box;
+  color: black;
+  cursor: pointer;
+  display: inline-block;
+  font-family: "Haas Grot Text R Web", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 20px;
+  list-style: none;
+  outline: none;
+  text-align: center;
+  text-decoration: none;
+  transition: color 100ms;
+  vertical-align: baseline;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: 0.3s ease-in-out;
+}
+
+.settings__section-time-input-set-buttons:hover {
+  background-color: #1900ff;
+}
+
+.settings__section-time-input-set-buttons:active {
+  background-color: white;
+}
+
+.settings__section-time-input-set-buttons:nth-child(2) {
+  position: absolute;
+  top: 25px;
+  right: 0px;
+}
