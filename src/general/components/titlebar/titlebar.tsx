@@ -1,12 +1,27 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import "./titlebar.css";
 
 import { appWindow } from "@tauri-apps/api/window";
 
 const TitleBar = () => {
+  const [isMaximized, setIsMaximized] = useState(false);
+  useEffect(() => {
+    const checkMaximized = async () => {
+      if (await appWindow.isMaximized()) {
+        setIsMaximized(true);
+      } else {
+        setIsMaximized(false);
+      }
+    };
+
+    checkMaximized();
+  }, []);
+
   return (
     <div data-tauri-drag-region className="titlebar">
-      <p className="titlebar-title">PassVault</p>
+      <p data-tauri-drag-region className="titlebar-title">
+        PassVault
+      </p>
       <div className="titlebar-button-container">
         <div
           className="titlebar-button"
@@ -15,22 +30,17 @@ const TitleBar = () => {
             appWindow.minimize();
           }}
         >
-          <img
-            src="https://api.iconify.design/mdi:window-minimize.svg"
-            alt="minimize"
-          />
+          <span className="material-icons window-icon">remove</span>
         </div>
         <div
           className="titlebar-button"
           id="titlebar-maximize"
           onClick={() => {
             appWindow.toggleMaximize();
+            setIsMaximized(!isMaximized);
           }}
         >
-          <img
-            src="https://api.iconify.design/mdi:window-maximize.svg"
-            alt="maximize"
-          />
+          <span className="material-icons window-icon">crop_square</span>
         </div>
         <div
           className="titlebar-button"
@@ -39,7 +49,7 @@ const TitleBar = () => {
             appWindow.close();
           }}
         >
-          <img src="https://api.iconify.design/mdi:close.svg" alt="close" />
+          <span className="material-icons window-icon">close</span>
         </div>
       </div>
     </div>

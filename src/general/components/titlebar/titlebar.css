@@ -1,6 +1,7 @@
 .titlebar {
   height: 30px;
-  background: #433a3a;
+  background: white;
+  color: black;
   user-select: none;
   display: flex;
   align-items: center;
@@ -9,6 +10,12 @@
   top: 0;
   left: 0;
   right: 0;
+  box-shadow: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
+}
+
+.window-icon {
+  color: black;
+  font-size: 20px;
 }
 
 .titlebar-title {
@@ -19,11 +26,14 @@
 }
 
 .titlebar-button-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   margin-left: auto;
 }
 
 .titlebar-button {
-  display: inline-flex;
+  display: flex;
   justify-content: center;
   align-items: center;
   width: 30px;
@@ -33,6 +43,6 @@
 }
 
 .titlebar-button:hover {
-  background: #00ff00;
+  background: #1900ff;
   color: black;
 }

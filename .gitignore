@@ -25,6 +25,9 @@
 *.bin
 *.dat
 
+# VS Code files
+*/.vscode
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

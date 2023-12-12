@@ -469,7 +469,9 @@ const HomePage: React.FC = () => {
           <div className="logo-pane">
             <div id="logo-container" className="logo-container">
               <Logo
-                buttonDisplay={<div></div>}
+                buttonDisplay={
+                  <div className={time === 0 ? "gg-key-home" : "gg-lock"}></div>
+                }
                 handleClickButton={
                   time === 0 ? runAuthFlow : handleLockPasswords
                 }
